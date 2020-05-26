@@ -98,7 +98,7 @@ namespace Console3D
             return 0;
         }
 
-        private static void RenderThread_ProcessingRawInput(OpenGL.RenderThread sender, OpenGL.RenderTimer timer)
+        private static void RenderThread_ProcessingRawInput(OpenGL.RenderThread sender, OpenGL.FrameStageEventArgs args)
         {
             if (Glfw.GetKey(sender.TargetWindow, Keys.Escape) == InputState.Press)
             {
