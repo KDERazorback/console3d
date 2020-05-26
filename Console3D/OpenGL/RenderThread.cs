@@ -15,14 +15,24 @@ namespace Console3D.OpenGL
         private ulong _lastFrameTimeValue = 0;
         private ulong _timeSinceLastFrame = 0; // Microseconds
         private ulong _frameIndex = 0;
+        private ulong _framesSkipped = 0;
         private ulong _totalFrameTime = 0; // Microseconds
         private ulong _currFrameTimerValue = 0;
         private string _initialWindowTitle = "OpenGL";
         private bool disposedValue;
+        private Size _internalResolution = new Size(800, 600);
 
-        public delegate void ProcessingRawInputDelegate(RenderThread sender, RenderTimer timer);
+        public delegate void FrameStageEventDelegate(RenderThread sender, FrameStageEventArgs args);
+        public delegate void FrameStageControllerEventDelegate(RenderThread sender, FrameStageControllerEventArgs args);
 
-        public event ProcessingRawInputDelegate ProcessingRawInput;
+        public event FrameStageEventDelegate ProcessingRawInput;
+        public event FrameStageEventDelegate FrameStart;
+        public event FrameStageEventDelegate FrameEnd;
+        public event FrameStageEventDelegate BufferClear;
+        public event FrameStageEventDelegate BufferSwap;
+        public event FrameStageEventDelegate Draw;
+        public event FrameStageEventDelegate DrawEnd;
+        public event FrameStageControllerEventDelegate DrawPrepare;
 
 
         public Thread Worker { get; private set; }
@@ -67,6 +77,26 @@ namespace Console3D.OpenGL
                 TargetWindow.Title = value;
             }
         }
+        public Size InternalResolution
+        {
+            get
+            {
+                return _internalResolution;
+            }
+            set
+            {
+                if (IsRunning)
+                    throw new InvalidOperationException("Cannot modify internal resolution while the Render thread is running.");
+
+                if (value == null)
+                    throw new ArgumentNullException("Internal resolution value cannot be null.");
+
+                if (value.IsEmpty)
+                    throw new ArgumentOutOfRangeException("Invalid internal resolution specified. Value cannot be empty.");
+
+                _internalResolution = value;
+            }
+        }
 
         public RenderThread(NativeWindow wnd, Size internalRes)
         {
@@ -75,12 +105,19 @@ namespace Console3D.OpenGL
 
             OwnsWindow = false;
             TargetWindow = wnd;
+            InternalResolution = internalRes;
         }
 
         public RenderThread(Size windowSize, Size internalRes)
         {
+            if (windowSize == null)
+                throw new ArgumentNullException("Internal resolution value cannot be null.");
+            if (windowSize.IsEmpty)
+                throw new ArgumentOutOfRangeException("Window size cannot be empty.");
+
             OwnsWindow = true;
             WindowSize = windowSize;
+            InternalResolution = internalRes;
         }
 
         public void Start()
@@ -132,10 +169,6 @@ namespace Console3D.OpenGL
             else
                 GLFW.Glfw.SwapInterval(0);
 
-            //Gl.ClearDepth(1.0f);
-            //Gl.Enable(EnableCap.DepthTest);
-            //Gl.DepthFunc(DepthFunction.Lequal);
-
             _lastFrameTimeValue = GLFW.Glfw.TimerValue;
             _timeSinceLastFrame = 0;
             _frameIndex = 0;
@@ -162,15 +195,36 @@ namespace Console3D.OpenGL
                 _totalFrameTime += _timeSinceLastFrame;
             }
 
+            OnFrameStart(CurrentTime);
+
             ProcessInput();
 
-
             ClearBuffer();
+
+            OnBufferClear(CurrentTime);
 
             if (AutoEventPolling)
                 ProcessEvents();
 
+            FrameStageControllerEventArgs args = new FrameStageControllerEventArgs(CurrentTime);
+            OnDrawPrepare(args);
+
+            if (args.SkipFrame)
+            {
+                _frameIndex++;
+                _lastFrameTimeValue = _currFrameTimerValue;
+                _framesSkipped++;
+                return;
+            }
+
+            OnDraw(CurrentTime);
+            OnDrawEnd(CurrentTime);
+
             SwapBuffers();
+
+            OnBufferSwap(CurrentTime);
+
+            OnFrameEnd(CurrentTime);
 
             SleepThread();
 
@@ -297,7 +351,42 @@ namespace Console3D.OpenGL
 
         protected virtual void OnProcessingRawInput(RenderTimer timer)
         {
-            ProcessingRawInput?.Invoke(this, timer);
+            ProcessingRawInput?.Invoke(this, new FrameStageEventArgs(timer));
+        }
+
+        protected virtual void OnFrameStart(RenderTimer timer)
+        {
+            FrameStart?.Invoke(this, new FrameStageEventArgs(timer));
+        }
+
+        protected virtual void OnFrameEnd(RenderTimer timer)
+        {
+            FrameEnd?.Invoke(this, new FrameStageEventArgs(timer));
+        }
+
+        protected virtual void OnBufferClear(RenderTimer timer)
+        {
+            BufferClear?.Invoke(this, new FrameStageEventArgs(timer));
+        }
+
+        protected virtual void OnBufferSwap(RenderTimer timer)
+        {
+            BufferSwap?.Invoke(this, new FrameStageEventArgs(timer));
+        }
+
+        protected virtual void OnDraw(RenderTimer timer)
+        {
+            Draw?.Invoke(this, new FrameStageEventArgs(timer));
+        }
+
+        protected virtual void OnDrawEnd(RenderTimer timer)
+        {
+            DrawEnd?.Invoke(this, new FrameStageEventArgs(timer));
+        }
+
+        protected virtual void OnDrawPrepare(FrameStageControllerEventArgs args)
+        {
+            DrawPrepare?.Invoke(this, args);
         }
     }
 }
