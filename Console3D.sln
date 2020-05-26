@@ -1,0 +1,44 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Console3D", "Console3D\Console3D.csproj", "{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenGL.Net_netcore2.0", "OpenGL.Net-0.8.4\OpenGL.Net\OpenGL.Net_netcore2.0.csproj", "{FEC658C5-185A-4364-A6BA-C9EF2B7ACD5F}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		OpenGL.Net-0.8.4\Khronos.Net\Khronos.Net.projitems*{fec658c5-185a-4364-a6ba-c9ef2b7acd5f}*SharedItemsImports = 5
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Debug|x86.Build.0 = Debug|Any CPU
+		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Release|x86.ActiveCfg = Release|Any CPU
+		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Release|x86.Build.0 = Release|Any CPU
+		{FEC658C5-185A-4364-A6BA-C9EF2B7ACD5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEC658C5-185A-4364-A6BA-C9EF2B7ACD5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEC658C5-185A-4364-A6BA-C9EF2B7ACD5F}.Debug|x86.ActiveCfg = Debug|x86
+		{FEC658C5-185A-4364-A6BA-C9EF2B7ACD5F}.Debug|x86.Build.0 = Debug|x86
+		{FEC658C5-185A-4364-A6BA-C9EF2B7ACD5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEC658C5-185A-4364-A6BA-C9EF2B7ACD5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FEC658C5-185A-4364-A6BA-C9EF2B7ACD5F}.Release|x86.ActiveCfg = Release|x86
+		{FEC658C5-185A-4364-A6BA-C9EF2B7ACD5F}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {62170005-75CE-4A54-8961-989500A0E649}
+	EndGlobalSection
+EndGlobal
