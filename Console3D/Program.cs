@@ -1,8 +1,13 @@
 ﻿using com.RazorSoftware.Logging;
+using Console3D.Textures.Text;
+using Console3D.Textures.TextureAtlas;
 using GLFW;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.Drawing.Text;
+using System.IO;
 using System.Text;
 using System.Threading;
 
@@ -27,6 +32,9 @@ namespace Console3D
                 System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture,
                 System.Runtime.InteropServices.RuntimeInformation.OSDescription);
             Log.WriteLine();
+
+            Log.WriteLine("Checking custom fonts...");
+            CheckRasterFonts();
 
             Log.WriteLine("Initializing OpenGL...");
 
@@ -106,6 +114,60 @@ namespace Console3D
                     sender.Stop();
                 else
                     AbortMainLoop = true;
+            }
+        }
+
+        private static void CheckRasterFonts(string fontsDirectory = "./fonts", string rasterDirectory = "./cache/fonts")
+        {
+            DirectoryInfo cacheDir = new DirectoryInfo(rasterDirectory.Replace('/', Path.DirectorySeparatorChar));
+            if (!cacheDir.Exists)
+                cacheDir.Create();
+
+            DirectoryInfo fontsDir = new DirectoryInfo(fontsDirectory.Replace('/', Path.DirectorySeparatorChar));
+            if (!fontsDir.Exists)
+            {
+                fontsDir.Create();
+                throw new FileNotFoundException(string.Format("The fonts directory doesnt exists ({0}). No font files installed on the application.", fontsDirectory));
+            }
+
+            FileInfo[] files = fontsDir.GetFiles();
+            long fontCount = 0;
+
+            if (files != null)
+            {
+                foreach (FileInfo font in files)
+                {
+                    if (string.Equals(font.Extension, ".otf", StringComparison.OrdinalIgnoreCase) || string.Equals(font.Extension, ".ttf", StringComparison.OrdinalIgnoreCase))
+                    { 
+                        Log.WriteLine("Loading font file %@...", LogLevel.Message, font.Name);
+                        FontLoader.LoadFromFile(font.FullName);
+                        fontCount++;
+                    }
+                }
+            }
+
+            if (files == null || files.Length < 1 || fontCount < 1)
+                throw new FileNotFoundException(string.Format("No OTF font files found on the fonts directory ({0}). No font files installed on the application.", fontsDirectory));
+
+            Log.WriteLine("Loaded %@ fonts into the application.", LogLevel.Message, FontLoader.LoadedFonts.Length.ToString("N0"));
+
+            GdiFontRasterizer rasterizer = new GdiFontRasterizer(true, true, true);
+            foreach (FontFamily family in FontLoader.LoadedFonts)
+            {
+                FileInfo targetFile = FontAtlas.GetAtlasFileFromName(cacheDir.FullName, family);
+                FileInfo targetFileMetadata = FontAtlas.GetAtlasMetadataFileFromName(cacheDir.FullName, family);
+
+                if (!targetFile.Exists)
+                {
+                    // Build font
+                    Log.WriteLine("Font '%@' is missing from cache. Rasterizing it...", LogLevel.Message, family.Name);
+                    
+                    rasterizer.SelectedFont = new Font(family, 18.0f);
+                    GlyphCollection rasterizedFont = rasterizer.Raster();
+
+                    Atlas fontAtlas = AtlasBuilder.BuildAtlas(rasterizedFont, AtlasLayoutMode.Positional);
+                    fontAtlas.ToFile(targetFile.FullName, targetFileMetadata.FullName, ImageFormat.Bmp);
+                }
             }
         }
     }

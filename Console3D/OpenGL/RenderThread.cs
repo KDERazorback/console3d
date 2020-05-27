@@ -41,7 +41,7 @@ namespace Console3D.OpenGL
         public Size ViewportSize { get; private set; }
         public Color ClearColor { get; set; } = Color.CornflowerBlue;
         public Size WindowSize { get; private set; }
-        public bool IsRunning => (Worker.IsAlive && Asynchronous) || (!Asynchronous && !AbortFlag);
+        public bool IsRunning => (Worker != null) && ((Worker.IsAlive && Asynchronous) || (!Asynchronous && !AbortFlag));
         public bool VerticalSync { get; set; } = true;
         public ulong TimeSinceLastFrame => _timeSinceLastFrame;
         public ulong FrameIndex => _frameIndex;
