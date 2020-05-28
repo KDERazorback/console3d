@@ -16,6 +16,7 @@ namespace Console3D
     public static class Program
     {
         private static bool AbortMainLoop = false;
+        private static bool ForceLocalLibraries = false;
 
         public static int Main(string[] args)
         {
@@ -37,7 +38,11 @@ namespace Console3D
             CheckRasterFonts();
 
             Log.WriteLine("Initializing OpenGL...");
-            OpenGL.Glfw.LibraryLoadManager.AssemblyLoader.LoadNativeGlfw();
+            if (ForceLocalLibraries)
+            {
+                Log.WriteLine("Forcing usage of local OpenGL libraries installed on the application directory.");
+                OpenGL.Glfw.LibraryLoadManager.AssemblyLoader.LoadNativeGlfw();
+            }
 
             Glfw.Init();
             Glfw.WindowHint(Hint.ClientApi, ClientApi.OpenGL);

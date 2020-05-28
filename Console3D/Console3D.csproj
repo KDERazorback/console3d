@@ -67,6 +67,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OpenGL.Net-0.8.4\OpenGL.Net\OpenGL.Net_netcore2.0.csproj" />
+    <ProjectReference Include="..\OpenGL.Net-0.8.4\OpenGL.Net\OpenGL.Net_netcore2.0.csproj">
+      <ReferenceSourceTarget>ProjectReference</ReferenceSourceTarget>
+    </ProjectReference>
   </ItemGroup>
 </Project>
