@@ -14,12 +14,8 @@
   <ItemGroup>
     <PackageReference Include="glfw" Version="3.3.2" />
     <PackageReference Include="glfw-net" Version="3.3.1" />
-    <PackageReference Include="RazorSoftware.Logging" Version="1.0.5.2-beta" />
     <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\OpenGL.Net-0.8.4\OpenGL.Net\OpenGL.Net_netcore2.0.csproj" />
+    <PackageReference Include="com.razorsoftware.logging.core" Version="1.0.4.6-beta" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,9 +26,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="fonts\unifont_csur.ttf">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="fonts\unifont_sample.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="fonts\unifont_upper.ttf">
@@ -73,4 +66,7 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\OpenGL.Net-0.8.4\OpenGL.Net\OpenGL.Net_netcore2.0.csproj" />
+  </ItemGroup>
 </Project>

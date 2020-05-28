@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -104,6 +105,8 @@ namespace Console3D.Textures.TextureAtlas
         {
             ScanTextureCollection(textures, out int textureW, out int textureH, out int textureCount, out int texturesPerRow, out int rows, out long maxTextureId);
 
+            if (textureCount < 1)
+                throw new IOException("Cannot process textures. No glyphs specified.");
             if (maxTextureId > 4096)
                 throw new IndexOutOfRangeException("The texture ids are too large to be inserted in a Positional Atlas.");
 

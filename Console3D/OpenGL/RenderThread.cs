@@ -21,6 +21,7 @@ namespace Console3D.OpenGL
         private string _initialWindowTitle = "OpenGL";
         private bool disposedValue;
         private Size _internalResolution = new Size(800, 600);
+        private bool _fullscreen = false;
 
         public delegate void FrameStageEventDelegate(RenderThread sender, FrameStageEventArgs args);
         public delegate void FrameStageControllerEventDelegate(RenderThread sender, FrameStageControllerEventArgs args);
@@ -95,6 +96,17 @@ namespace Console3D.OpenGL
                     throw new ArgumentOutOfRangeException("Invalid internal resolution specified. Value cannot be empty.");
 
                 _internalResolution = value;
+            }
+        }
+        public bool Fullscreen
+        {
+            get
+            {
+                return _fullscreen;
+            }
+            set
+            {
+                _fullscreen = value;
             }
         }
 
@@ -261,7 +273,7 @@ namespace Console3D.OpenGL
             if (TargetWindow != null)
                 throw new InvalidOperationException("There is already a window created for the current Render thread.");
 
-            TargetWindow = new NativeWindow(WindowSize.Width, WindowSize.Height, title);
+            TargetWindow = new NativeWindow(WindowSize.Width, WindowSize.Height, title, (Fullscreen ? GLFW.Glfw.PrimaryMonitor : GLFW.Monitor.None), Window.None);
         }
 
         public void CreateMainWindow()

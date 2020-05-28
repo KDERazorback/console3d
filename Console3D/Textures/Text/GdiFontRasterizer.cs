@@ -83,15 +83,33 @@ namespace Console3D.Textures.Text
                     }
                     if (glyphSize.Width < 1)
                     {
-                        Logger.WriteLine("Glyph %@ doesnt have a valid width after string measurement. Using previous glyph as template with value of %@.", LogLevel.Warning, info.CodePoint, lastGlyphSize.Width);
-                        glyphSize.Width = lastGlyphSize.Width;
-                        warnings++;
+                        if (lastGlyphSize.Width < 1)
+                        {
+                            Logger.WriteLine("Glyph %@ doesnt have a valid width after string measurement. Making it square (%@).", LogLevel.Warning, info.CodePoint, lastGlyphSize.Width);
+                            glyphSize.Width = glyphSize.Height;
+                            warnings++;
+                        }
+                        else
+                        {
+                            Logger.WriteLine("Glyph %@ doesnt have a valid width after string measurement. Using previous glyph as template with value of %@.", LogLevel.Warning, info.CodePoint, lastGlyphSize.Width);
+                            glyphSize.Width = lastGlyphSize.Width;
+                            warnings++;
+                        }
                     }
                     if (glyphSize.Height < 1)
                     {
-                        Logger.WriteLine("Glyph %@ doesnt have a valid height after string measurement. Using previous glyph as template  with value of %@.", LogLevel.Warning, info.CodePoint, lastGlyphSize.Height);
-                        glyphSize.Height = lastGlyphSize.Height;
-                        warnings++;
+                        if (lastGlyphSize.Height < 1)
+                        {
+                            Logger.WriteLine("Glyph %@ doesnt have a valid height after string measurement. Making it square (%@).", LogLevel.Warning, info.CodePoint, lastGlyphSize.Height);
+                            glyphSize.Height = glyphSize.Width;
+                            warnings++;
+                        }
+                        else
+                        {
+                            Logger.WriteLine("Glyph %@ doesnt have a valid height after string measurement. Using previous glyph as template  with value of %@.", LogLevel.Warning, info.CodePoint, lastGlyphSize.Height);
+                            glyphSize.Height = lastGlyphSize.Height;
+                            warnings++;
+                        }
                     }
 
                     if (info.CodePoint == 32)

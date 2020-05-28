@@ -15,7 +15,13 @@ namespace Console3D.OpenGL.Glfw
         {
             AssemblyLoader = new GlfwAssemblyLoadContext(logFile);
             AssemblyLoadContext.Default.ResolvingUnmanagedDll += AssemblyResolver_ResolvingUnmanagedDll;
+            AssemblyLoadContext.Default.Resolving += AssemblyResolver_Resolving;
             Ready = true;
+        }
+
+        private static System.Reflection.Assembly AssemblyResolver_Resolving(AssemblyLoadContext arg1, System.Reflection.AssemblyName arg2)
+        {
+            throw new NotImplementedException();
         }
 
         public static void Shutdown()

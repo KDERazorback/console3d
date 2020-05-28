@@ -37,7 +37,9 @@ namespace Console3D
             CheckRasterFonts();
 
             Log.WriteLine("Initializing OpenGL...");
+            OpenGL.Glfw.LibraryLoadManager.AssemblyLoader.LoadNativeGlfw();
 
+            Glfw.Init();
             Glfw.WindowHint(Hint.ClientApi, ClientApi.OpenGL);
             Glfw.WindowHint(Hint.ContextVersionMajor, 3);
             Glfw.WindowHint(Hint.ContextVersionMinor, 3);
@@ -164,6 +166,12 @@ namespace Console3D
                     
                     rasterizer.SelectedFont = new Font(family, 18.0f);
                     GlyphCollection rasterizedFont = rasterizer.Raster();
+
+                    if (rasterizedFont.Count < 1)
+                    {
+                        Log.WriteLine("Failed to process font file %@. No glyphs found inside the font file.", LogLevel.Error, family.Name);
+                        continue; ;
+                    }
 
                     Atlas fontAtlas = AtlasBuilder.BuildAtlas(rasterizedFont, AtlasLayoutMode.Positional);
                     fontAtlas.ToFile(targetFile.FullName, targetFileMetadata.FullName, ImageFormat.Bmp);
