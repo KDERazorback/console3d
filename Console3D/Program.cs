@@ -108,7 +108,9 @@ namespace Console3D
             Log.WriteLine("Cleaning up...");
             renderThread.Dispose();
             OpenGL.Glfw.LibraryLoadManager.Shutdown();
+#if EMBEDDED_GL
             OpenGL.Gl.UnbindApi();
+#endif
 
             return 0;
         }

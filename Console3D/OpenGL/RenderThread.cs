@@ -6,7 +6,9 @@ using System.Drawing;
 using System.Reflection;
 using System.Text;
 using System.Threading;
-//using OpenGL;
+#if !EMBEDDED_GL
+using OpenGL;
+#endif
 
 namespace Console3D.OpenGL
 {
@@ -170,9 +172,12 @@ namespace Console3D.OpenGL
 
             GLFW.Glfw.MakeContextCurrent(TargetWindow);
 
+#if EMBEDDED_GL
             if (!Gl.IsApiBound)
                 Gl.BindApi();
-            //Gl.BindAPI();
+#else
+            Gl.BindAPI();
+#endif
 
             ViewportSize = new Size(TargetWindow.ClientSize.Width, TargetWindow.ClientSize.Height);
 
@@ -252,9 +257,14 @@ namespace Console3D.OpenGL
         private void ClearBuffer()
         {
             //Gl.LoadIdentity();
+#if EMBEDDED_GL
             Gl.ClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 0.5f);
-            //glClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 1.0f);
             Gl.Clear((int)global::OpenGL.ClearBufferMask.ColorBufferBit);
+#else
+            Gl.ClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 0.5f);
+            Gl.Clear(ClearBufferMask.ColorBufferBit);
+#endif
+            //glClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 1.0f);
             //glClear((int)ClearBufferMask.ColorBufferBit);
         }
 

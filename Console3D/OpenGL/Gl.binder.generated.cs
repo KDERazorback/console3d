@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if EMBEDDED_GL
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -50,3 +51,4 @@ namespace Console3D.OpenGL
         }
     }
 }
+#endif
