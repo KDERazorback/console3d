@@ -17,6 +17,10 @@ namespace Console3D
     {
         private static bool AbortMainLoop = false;
         private static bool ForceLocalLibraries = false;
+        private static OpenGL.Shaders.ShaderProgram glyphShader;
+        private static Size ConsoleSize = new Size(120, 30);
+        private static Textures.TextureAtlas.Atlas fontAtlas;
+        private static uint fontAtlasTexture;
 
         public static int Main(string[] args)
         {
@@ -36,6 +40,10 @@ namespace Console3D
 
             Log.WriteLine("Checking custom fonts...");
             CheckRasterFonts();
+            fontAtlas = Textures.TextureAtlas.Atlas.FromFile(
+                FontAtlas.GetAtlasFileFromName("./cache/fonts", "Code New Roman").FullName,
+                FontAtlas.GetAtlasMetadataFileFromName("./cache/fonts", "Code New Roman").FullName
+            );
 
             Log.WriteLine("Initializing OpenGL...");
             if (ForceLocalLibraries)
@@ -66,6 +74,25 @@ namespace Console3D
             }
 
             renderThread.ProcessingRawInput += RenderThread_ProcessingRawInput;
+            renderThread.DrawPrepare += RenderThread_DrawPrepare;
+            renderThread.Draw += RenderThread_Draw;
+
+#if EMBEDDED_GL
+            if (!OpenGL.Gl.IsApiBound)
+                OpenGL.Gl.BindApi();
+#else
+            global::OpenGL.Gl.BindAPI();
+#endif
+
+            Log.WriteLine("Compiling shaders...");
+            Log.WriteLine("Compiling 'glyph' program...");
+            glyphShader = OpenGL.Shaders.ShaderProgram.FromFiles("./shaders/glyph.vert", "./shaders/glyph.frag");
+            glyphShader.Compile();
+            Log.WriteLine("Shader compilation completed.");
+
+            Log.WriteLine("Loading textures...");
+            Log.WriteLine("Loading font atlas 'Code New Roman'...");
+            fontAtlasTexture = LoadTexture(fontAtlas.Data, global::OpenGL.TextureWrapMode.ClampToBorder);
 
             Log.WriteLine("Starting render thread in %@ mode...",
                 LogLevel.Message,
@@ -113,6 +140,122 @@ namespace Console3D
 #endif
 
             return 0;
+        }
+
+        private static void RenderThread_Draw(OpenGL.RenderThread sender, OpenGL.FrameStageEventArgs args)
+        {
+            if (!sender.IsMainThread() && !sender.Asynchronous)
+                throw new InvalidOperationException("Draw operation initiated from secondary thread when supposed to run in Sync mode.");
+
+            int cellX = sender.InternalResolution.Width / ConsoleSize.Width;
+            int cellY = sender.InternalResolution.Height / ConsoleSize.Height;
+
+            uint vao = global::OpenGL.Gl.GenVertexArray();
+            global::OpenGL.Gl.BindVertexArray(vao);
+
+            CheckGlErrors("pre-texture");
+
+            sender.SetUniform("resolution", 0.0f, 0.0f, sender.InternalResolution.Width, sender.InternalResolution.Height);
+            global::OpenGL.Gl.ActiveTexture(global::OpenGL.TextureUnit.Texture0);
+            global::OpenGL.Gl.BindTexture(global::OpenGL.TextureTarget.Texture2d, fontAtlasTexture);
+
+            CheckGlErrors("post-texture");
+
+            List<float> vertices = new List<float>(4096);
+            List<uint> indices = new List<uint>(4096);
+
+            for (int x = 0; x < cellX; x++)
+            {
+                for (int y = 0; y < cellY; y++)
+                {
+                    float ox = x * cellX;
+                    float oy = y * cellY;
+
+                    Rectangle texRec = fontAtlas.GetPointerById(65).Bounds;
+
+                    int qi = vertices.Count;
+
+                    vertices.AddRange(new float[] { // Add vertices
+                        ox, oy,  // 0,0 (A)
+                        texRec.X, texRec.Y, // Texture X,Y
+                        1, 0, 0, 1, // Back
+                        1, 1, 1, 1, // Fore
+
+                        ox + cellX, oy, // 1,0 (B)
+                        texRec.Right, texRec.Y, // Texture X,Y
+                        1, 0, 0, 1, // Back
+                        1, 1, 1, 1, // Fore
+
+                        ox + cellX, oy + cellY, // 1,1 (C)
+                        texRec.Right, texRec.Bottom, // Texture X,Y
+                        1, 0, 0, 1, // Back
+                        1, 1, 1, 1, // Fore
+
+                        ox, oy + cellY, //0,1 (D)
+                        texRec.X, texRec.Bottom, // Texture X,Y
+                        1, 0, 0, 1, // Back
+                        1, 1, 1, 1, // Fore
+                    });
+
+
+                    indices.AddRange(new uint[]
+                    {
+                        (uint)(qi+1), // B
+                        (uint)(qi+3), // D
+                        (uint)(qi), // A
+                        //(uint)(qi+1), // B
+                        (uint)(qi+2), // C
+                        (uint)(qi+3), // D
+                    });
+                }
+            }
+
+            uint vbo = global::OpenGL.Gl.GenBuffer();
+            global::OpenGL.Gl.BindBuffer(global::OpenGL.BufferTarget.ArrayBuffer, vbo);
+
+            CheckGlErrors("pre-vab");
+
+            float[] fvertices = vertices.ToArray();
+            global::OpenGL.Gl.BufferData(global::OpenGL.BufferTarget.ArrayBuffer, (uint)fvertices.Length * sizeof(float), fvertices, global::OpenGL.BufferUsage.StreamDraw);
+
+            CheckGlErrors("pre-eab");
+
+            uint[] iindices = indices.ToArray();
+            uint ebo = global::OpenGL.Gl.GenBuffer();
+            global::OpenGL.Gl.BindBuffer(global::OpenGL.BufferTarget.ElementArrayBuffer, ebo);
+            global::OpenGL.Gl.BufferData(global::OpenGL.BufferTarget.ElementArrayBuffer, (uint)iindices.Length * sizeof(int), iindices, global::OpenGL.BufferUsage.StreamDraw);
+
+            CheckGlErrors("pre_va_pointer");
+
+            global::OpenGL.Gl.VertexAttribPointer(0, 2, global::OpenGL.VertexAttribType.Float, false, 12 * sizeof(float), 0 * sizeof(float));
+            CheckGlErrors("post-va-pointer-0-set");
+            global::OpenGL.Gl.EnableVertexAttribArray(0);
+            CheckGlErrors("post-va-pointer-0-enable");
+
+            global::OpenGL.Gl.VertexAttribPointer(1, 2, global::OpenGL.VertexAttribType.Float, false, 12 * sizeof(float), 2 * sizeof(float));
+            global::OpenGL.Gl.EnableVertexAttribArray(1);
+            CheckGlErrors("post-va-pointer-1");
+
+            global::OpenGL.Gl.VertexAttribPointer(2, 4, global::OpenGL.VertexAttribType.Float, false, 12 * sizeof(float), 4 * sizeof(float));
+            global::OpenGL.Gl.EnableVertexAttribArray(2);
+            CheckGlErrors("post-va-pointer-2");
+
+            global::OpenGL.Gl.VertexAttribPointer(3, 4, global::OpenGL.VertexAttribType.Float, false, 12 * sizeof(float), 8 * sizeof(float));
+            global::OpenGL.Gl.EnableVertexAttribArray(3);
+
+            CheckGlErrors("predraw");
+
+            global::OpenGL.Gl.DrawElements(global::OpenGL.PrimitiveType.TriangleFan, 5, global::OpenGL.DrawElementsType.UnsignedInt, 0);
+
+            CheckGlErrors("final");
+            global::OpenGL.Gl.BindVertexArray(0);
+        }
+
+        private static void RenderThread_DrawPrepare(OpenGL.RenderThread sender, OpenGL.FrameStageControllerEventArgs args)
+        {
+            CheckGlErrors("pre-program");
+            sender.SelectShader(glyphShader);
+            CheckGlErrors("post-program");
         }
 
         private static void RenderThread_ProcessingRawInput(OpenGL.RenderThread sender, OpenGL.FrameStageEventArgs args)
@@ -163,8 +306,8 @@ namespace Console3D
             GdiFontRasterizer rasterizer = new GdiFontRasterizer(true, true, true);
             foreach (FontFamily family in FontLoader.LoadedFonts)
             {
-                FileInfo targetFile = FontAtlas.GetAtlasFileFromName(cacheDir.FullName, family);
-                FileInfo targetFileMetadata = FontAtlas.GetAtlasMetadataFileFromName(cacheDir.FullName, family);
+                FileInfo targetFile = FontAtlas.GetAtlasFileFromName(cacheDir.FullName, family.Name);
+                FileInfo targetFileMetadata = FontAtlas.GetAtlasMetadataFileFromName(cacheDir.FullName, family.Name);
 
                 if (!targetFile.Exists)
                 {
@@ -184,6 +327,65 @@ namespace Console3D
                     fontAtlas.ToFile(targetFile.FullName, targetFileMetadata.FullName, ImageFormat.Bmp);
                 }
             }
+        }
+
+        private static uint LoadTexture(Bitmap data, global::OpenGL.TextureWrapMode mode)
+        {
+            BitmapData lockedBitmap = data.LockBits(new Rectangle(Point.Empty, data.Size), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            byte[] buffer = new byte[lockedBitmap.Width * lockedBitmap.Height * 4];
+
+            for (int i = 0; i < buffer.Length; i += 4)
+            {
+                byte r, g, b, a;
+                a = System.Runtime.InteropServices.Marshal.ReadByte(lockedBitmap.Scan0 + i);
+                r = System.Runtime.InteropServices.Marshal.ReadByte(lockedBitmap.Scan0 + i + 1);
+                g = System.Runtime.InteropServices.Marshal.ReadByte(lockedBitmap.Scan0 + i + 2);
+                b = System.Runtime.InteropServices.Marshal.ReadByte(lockedBitmap.Scan0 + i + 3);
+
+                buffer[i] = r;
+                buffer[i + 1] = g;
+                buffer[i + 2] = b;
+                buffer[i + 3] = a;
+            }
+
+            data.UnlockBits(lockedBitmap);
+
+            // TODO: Add embedded GL code here
+#if EMBEDDED_GL
+            uint textureId = Gl.GenTexture();
+            Gl.BindTexture(global::OpenGL.TextureTarget.Texture2d, textureId);
+            throw new NotImplementedException();
+#else
+            uint textureId = global::OpenGL.Gl.GenTexture();
+            global::OpenGL.Gl.BindTexture(global::OpenGL.TextureTarget.Texture2d, textureId);
+            global::OpenGL.Gl.TexParameter(global::OpenGL.TextureTarget.Texture2d, global::OpenGL.TextureParameterName.TextureWrapS, (int)mode);
+            global::OpenGL.Gl.TexParameter(global::OpenGL.TextureTarget.Texture2d, global::OpenGL.TextureParameterName.TextureWrapT, (int)mode);
+            global::OpenGL.Gl.TexImage2D(global::OpenGL.TextureTarget.Texture2d,
+                0,
+                global::OpenGL.InternalFormat.Rgba8,
+                data.Width, data.Height,
+                0,
+                global::OpenGL.PixelFormat.Rgba,
+                global::OpenGL.PixelType.UnsignedByte,
+                buffer);
+#endif
+
+
+            if (mode == global::OpenGL.TextureWrapMode.ClampToBorder)
+            {
+                float[] borderColor = new float[] { 0xff, 0x14, 0x93 };
+                global::OpenGL.Gl.TexParameter(global::OpenGL.TextureTarget.Texture2d, global::OpenGL.TextureParameterName.TextureBorderColor, borderColor);
+            }
+
+            return textureId;
+        }
+
+        private static void CheckGlErrors(string stage)
+        {
+            global::OpenGL.ErrorCode code = global::OpenGL.Gl.GetError();
+
+            if (code != global::OpenGL.ErrorCode.NoError)
+                throw new System.Exception(string.Format("OpenGL Draw error on stage {0}: {1}", stage, code.ToString()));
         }
     }
 }

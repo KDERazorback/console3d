@@ -44,15 +44,5 @@ namespace Console3D.Textures.Text
             PrivateCollection.AddFontFile(fi.FullName);
             LoadedFontsSet.Add(hashString);
         }
-
-        public static string GetFontFamilyCachedName(FontFamily family)
-        {
-            char[] invalidChars = Path.GetInvalidFileNameChars();
-            string filename = string.Format("{0}.bmp", family.Name);
-            foreach (char c in invalidChars)
-                filename = filename.Replace(c, '_');
-
-            return filename;
-        }
     }
 }

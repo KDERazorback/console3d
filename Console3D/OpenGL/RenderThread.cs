@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using Console3D.OpenGL.Shaders;
 #if !EMBEDDED_GL
 using OpenGL;
 #endif
@@ -36,6 +37,7 @@ namespace Console3D.OpenGL
         public event FrameStageEventDelegate Draw;
         public event FrameStageEventDelegate DrawEnd;
         public event FrameStageControllerEventDelegate DrawPrepare;
+        public event FrameStageEventDelegate Sleeping;
 
 
         public Thread Worker { get; private set; }
@@ -111,6 +113,8 @@ namespace Console3D.OpenGL
                 _fullscreen = value;
             }
         }
+        public bool FrameStarted { get; private set; }
+        public ShaderProgram ActiveShaderProgram { get; private set; }
 
         public RenderThread(NativeWindow wnd, Size internalRes)
         {
@@ -181,10 +185,21 @@ namespace Console3D.OpenGL
 
             ViewportSize = new Size(TargetWindow.ClientSize.Width, TargetWindow.ClientSize.Height);
 
+#if EMBEDDED_GL
+#else
+            global::OpenGL.Gl.Viewport(0, 0, ViewportSize.Width, ViewportSize.Height);
+#endif
+
             if (VerticalSync)
                 GLFW.Glfw.SwapInterval(1);
             else
                 GLFW.Glfw.SwapInterval(0);
+
+#if EMBEDDED_GL
+            Gl.Enable((int)EnableCap.Blend);
+#else
+            Gl.Enable(EnableCap.Blend);
+#endif
 
             _lastFrameTimeValue = GLFW.Glfw.TimerValue;
             _timeSinceLastFrame = 0;
@@ -212,6 +227,7 @@ namespace Console3D.OpenGL
                 _totalFrameTime += _timeSinceLastFrame;
             }
 
+            FrameStarted = true;
             OnFrameStart(CurrentTime);
 
             ProcessInput();
@@ -236,12 +252,14 @@ namespace Console3D.OpenGL
 
             OnDraw(CurrentTime);
             OnDrawEnd(CurrentTime);
+            FrameStarted = false;
 
             SwapBuffers();
 
             OnBufferSwap(CurrentTime);
 
             OnFrameEnd(CurrentTime);
+            ActiveShaderProgram = null;
 
             SleepThread();
 
@@ -257,11 +275,10 @@ namespace Console3D.OpenGL
         private void ClearBuffer()
         {
             //Gl.LoadIdentity();
-#if EMBEDDED_GL
             Gl.ClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 0.5f);
+#if EMBEDDED_GL
             Gl.Clear((int)global::OpenGL.ClearBufferMask.ColorBufferBit);
 #else
-            Gl.ClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 0.5f);
             Gl.Clear(ClearBufferMask.ColorBufferBit);
 #endif
             //glClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 1.0f);
@@ -275,7 +292,7 @@ namespace Console3D.OpenGL
 
         private void SleepThread()
         {
-
+            OnSleeping(CurrentTime);
         }
 
         public void CreateMainWindow(string title)
@@ -340,6 +357,15 @@ namespace Console3D.OpenGL
             return false;
         }
 
+        public void SelectShader(ShaderProgram program)
+        {
+            if (!FrameStarted)
+                throw new InvalidOperationException("Cannot select a Shader program when no frame is currently started on the GPU.");
+
+            ActiveShaderProgram = program;
+            Gl.UseProgram(program.ProgramId);
+        }
+
         ~RenderThread()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -351,6 +377,38 @@ namespace Console3D.OpenGL
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
+        }
+
+        public void SetUniform(string name, float v1, float? v2 = null, float? v3 = null, float? v4 = null)
+        {
+            if (ActiveShaderProgram == null)
+                throw new InvalidOperationException("No shader program is loaded. Cannot set uniforms.");
+
+            int uniformLocation = Gl.GetUniformLocation(ActiveShaderProgram.ProgramId, name);
+
+            if (uniformLocation < 0)
+                throw new KeyNotFoundException(string.Format("The specified uniform '{0}' cannot be found for program '{1}'.", name, ActiveShaderProgram.ProgramId));
+
+            if (v4 != null && v4.HasValue)
+            {
+                Gl.Uniform4(uniformLocation, v1, v2.Value, v3.Value, v4.Value);
+                return;
+            }
+
+            if (v3 != null && v3.HasValue)
+            {
+                Gl.Uniform3(uniformLocation, v1, v2.Value, v3.Value);
+                return;
+            }
+
+            if (v2 != null && v2.HasValue)
+            {
+                Gl.Uniform2(uniformLocation, v1, v2.Value);
+                return;
+            }
+
+            Gl.Uniform1(uniformLocation, v1);
+            return;
         }
 
         protected virtual void Dispose(bool disposing)
@@ -409,6 +467,11 @@ namespace Console3D.OpenGL
         protected virtual void OnDrawPrepare(FrameStageControllerEventArgs args)
         {
             DrawPrepare?.Invoke(this, args);
+        }
+
+        protected virtual void OnSleeping(RenderTimer timer)
+        {
+            Sleeping?.Invoke(this, new FrameStageEventArgs(timer));
         }
     }
 }

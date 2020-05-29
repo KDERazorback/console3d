@@ -12,6 +12,7 @@
   <ItemGroup>
     <Folder Include="lib\glfw\linux\" />
     <Folder Include="OpenGL\Shaders\" />
+    <Folder Include="shaders\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -65,6 +66,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="res\UnicodeData.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="shaders\glyph.frag">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="shaders\glyph.vert">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
