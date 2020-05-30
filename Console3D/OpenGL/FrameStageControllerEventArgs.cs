@@ -11,5 +11,6 @@ namespace Console3D.OpenGL
         }
 
         public bool SkipFrame { get; set; }
+        public bool AbortExecution { get; set; }
     }
 }

@@ -1,13 +1,10 @@
 ﻿using com.RazorSoftware.Logging;
-using OpenGL;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Transactions;
 
 namespace Console3D.Textures.Text
 {

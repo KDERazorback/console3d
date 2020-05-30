@@ -46,6 +46,14 @@ namespace Console3D.OpenGL.Glfw
 
         public IntPtr LoadNativeGlfw()
         {
+#if LOAD_GLES
+            if (string.Equals(PlatformInfo.DetectedPlatformName, "windows", StringComparison.OrdinalIgnoreCase))
+            {
+                LoadNativeLibrary("d3dcompiler_46.dll");
+                LoadNativeLibrary("libGLESv2.dll");
+                LoadNativeLibrary("libEGL.dll");
+            }
+#endif
             return LoadNativeLibrary(PlatformInfo.NativeGlfwName);
         }
 

@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using Console3D.OpenGL.Shaders;
 #if !EMBEDDED_GL
-using OpenGL;
+using Gl = global::OpenGL.Gl;
 #endif
 
 namespace Console3D.OpenGL
@@ -28,8 +28,9 @@ namespace Console3D.OpenGL
 
         public delegate void FrameStageEventDelegate(RenderThread sender, FrameStageEventArgs args);
         public delegate void FrameStageControllerEventDelegate(RenderThread sender, FrameStageControllerEventArgs args);
+        public delegate void ContextEventDelegate(RenderThread sender);
 
-        public event FrameStageEventDelegate ProcessingRawInput;
+        public event FrameStageControllerEventDelegate ProcessingRawInput;
         public event FrameStageEventDelegate FrameStart;
         public event FrameStageEventDelegate FrameEnd;
         public event FrameStageEventDelegate BufferClear;
@@ -38,6 +39,7 @@ namespace Console3D.OpenGL
         public event FrameStageEventDelegate DrawEnd;
         public event FrameStageControllerEventDelegate DrawPrepare;
         public event FrameStageEventDelegate Sleeping;
+        public event ContextEventDelegate ContextCreated;
 
 
         public Thread Worker { get; private set; }
@@ -55,6 +57,9 @@ namespace Console3D.OpenGL
         public bool AutoEventPolling { get; set; } = true;
         public double SystemTimerResolution { get; private set; } // Microseconds
         private bool OwnsWindow { get; }
+        public bool AutoClearFrames { get; set; } = true;
+        public bool AutoSetViewport { get; set; } = true;
+        public AutoEnableCapabilitiesFlags AutoEnableCaps { get; set; } = AutoEnableCapabilitiesFlags.All;
         public RenderTimer CurrentTime
         {
             get
@@ -176,6 +181,7 @@ namespace Console3D.OpenGL
 
             GLFW.Glfw.MakeContextCurrent(TargetWindow);
 
+
 #if EMBEDDED_GL
             if (!Gl.IsApiBound)
                 Gl.BindApi();
@@ -185,21 +191,24 @@ namespace Console3D.OpenGL
 
             ViewportSize = new Size(TargetWindow.ClientSize.Width, TargetWindow.ClientSize.Height);
 
+            if (AutoSetViewport)
+            {
 #if EMBEDDED_GL
+                throw new NotImplementedException(); // No viewport function
 #else
-            global::OpenGL.Gl.Viewport(0, 0, ViewportSize.Width, ViewportSize.Height);
+                global::OpenGL.Gl.Viewport(0, 0, ViewportSize.Width, ViewportSize.Height);
 #endif
+            }
 
             if (VerticalSync)
                 GLFW.Glfw.SwapInterval(1);
             else
                 GLFW.Glfw.SwapInterval(0);
 
-#if EMBEDDED_GL
-            Gl.Enable((int)EnableCap.Blend);
-#else
-            Gl.Enable(EnableCap.Blend);
-#endif
+            if (AutoEnableCaps.HasFlag(AutoEnableCapabilitiesFlags.Blend))
+                Gl.Enable(EnableCap.Blend);
+
+            OnContextCreated();
 
             _lastFrameTimeValue = GLFW.Glfw.TimerValue;
             _timeSinceLastFrame = 0;
@@ -227,21 +236,37 @@ namespace Console3D.OpenGL
                 _totalFrameTime += _timeSinceLastFrame;
             }
 
+            FrameStageControllerEventArgs args = new FrameStageControllerEventArgs(CurrentTime);
+
             FrameStarted = true;
             OnFrameStart(CurrentTime);
 
-            ProcessInput();
+            ProcessInput(args);
 
-            ClearBuffer();
+            if (args.AbortExecution)
+            {
+                AbortFlag = true;
+                return;
+            }
 
-            OnBufferClear(CurrentTime);
+            if (AutoClearFrames)
+            {
+                ClearBuffer();
+
+                OnBufferClear(CurrentTime);
+            }
 
             if (AutoEventPolling)
                 ProcessEvents();
 
-            FrameStageControllerEventArgs args = new FrameStageControllerEventArgs(CurrentTime);
+            args = new FrameStageControllerEventArgs(CurrentTime);
             OnDrawPrepare(args);
 
+            if (args.AbortExecution)
+            {
+                AbortFlag = true;
+                return;
+            }
             if (args.SkipFrame)
             {
                 _frameIndex++;
@@ -267,20 +292,16 @@ namespace Console3D.OpenGL
             _lastFrameTimeValue = _currFrameTimerValue;
         }
 
-        private void ProcessInput()
+        private void ProcessInput(FrameStageControllerEventArgs args)
         {
-            OnProcessingRawInput(CurrentTime);
+            OnProcessingRawInput(args);
         }
 
         private void ClearBuffer()
         {
             //Gl.LoadIdentity();
             Gl.ClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 0.5f);
-#if EMBEDDED_GL
-            Gl.Clear((int)global::OpenGL.ClearBufferMask.ColorBufferBit);
-#else
             Gl.Clear(ClearBufferMask.ColorBufferBit);
-#endif
             //glClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 1.0f);
             //glClear((int)ClearBufferMask.ColorBufferBit);
         }
@@ -429,9 +450,9 @@ namespace Console3D.OpenGL
             }
         }
 
-        protected virtual void OnProcessingRawInput(RenderTimer timer)
+        protected virtual void OnProcessingRawInput(FrameStageControllerEventArgs args)
         {
-            ProcessingRawInput?.Invoke(this, new FrameStageEventArgs(timer));
+            ProcessingRawInput?.Invoke(this, args);
         }
 
         protected virtual void OnFrameStart(RenderTimer timer)
@@ -472,6 +493,11 @@ namespace Console3D.OpenGL
         protected virtual void OnSleeping(RenderTimer timer)
         {
             Sleeping?.Invoke(this, new FrameStageEventArgs(timer));
+        }
+
+        protected virtual void OnContextCreated()
+        {
+            ContextCreated?.Invoke(this);
         }
     }
 }
