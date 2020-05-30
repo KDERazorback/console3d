@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if EMBEDDED_GL
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -93,3 +94,4 @@ namespace Console3D.OpenGL
 		GeometryOutputType = 0x8918,
 	}
 }
+#endif

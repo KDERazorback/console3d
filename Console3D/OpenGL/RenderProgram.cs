@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Text;
+#if !EMBEDDED_GL
+using global::OpenGL;
+using Gl = global::OpenGL.Gl;
+#endif
 
 namespace Console3D.OpenGL
 {
@@ -36,7 +40,6 @@ namespace Console3D.OpenGL
             KhronosVersion ver = Gl.CurrentVersion;
             ContextCreationEventArgs args = new ContextCreationEventArgs(ver.Api, new Version(ver.Major, ver.Minor, ver.Revision), ver.ToString(), ver.Profile, Gl.CurrentVendor);
 #else
-            //Gl.BindAPI();
             Khronos.KhronosVersion ver = Gl.CurrentVersion;
             ContextCreationEventArgs args = new ContextCreationEventArgs(ver.Api, new Version(ver.Major, ver.Minor, ver.Revision), ver.ToString(), ver.Profile, Gl.CurrentVendor);
 #endif

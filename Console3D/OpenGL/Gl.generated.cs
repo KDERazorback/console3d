@@ -1,6 +1,7 @@
 ﻿#if EMBEDDED_GL
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -65,6 +66,10 @@ namespace Console3D.OpenGL
         internal unsafe delegate void glGetProgramiv(uint program, int pname, int* values);
         public delegate void glViewportHandler(int x, int y, int width, int height);
         public delegate IntPtr glGetStringHandler(int name);
+        public delegate void glEndHandler();
+        public delegate void glBeginiHandler(int mode);
+        public delegate void glColor3fHandler(float r, float g, float b);
+        public delegate void glVertex2fHandler(float x, float y);
 
 
 
@@ -123,6 +128,10 @@ namespace Console3D.OpenGL
         internal static glGetProgramiv GetProgramiv;
         public static glViewportHandler Viewport;
         public static glGetStringHandler GetStringpi;
+        public static glEndHandler End;
+        public static glBeginiHandler Begini;
+        public static glColor3fHandler Color3f;
+        public static glVertex2fHandler Vertex2f;
     }
 }
 #endif

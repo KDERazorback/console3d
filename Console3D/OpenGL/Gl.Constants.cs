@@ -1,4 +1,5 @@
-﻿namespace Console3D.OpenGL
+﻿#if EMBEDDED_GL
+namespace Console3D.OpenGL
 {
     public partial class Gl
     {
@@ -13,3 +14,4 @@
         public const int GL_HALF_FLOAT = 0x140B;
     }
 }
+#endif

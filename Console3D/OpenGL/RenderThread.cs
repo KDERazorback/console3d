@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Console3D.OpenGL.Shaders;
 #if !EMBEDDED_GL
+using global::OpenGL;
 using Gl = global::OpenGL.Gl;
 #endif
 
@@ -186,19 +187,14 @@ namespace Console3D.OpenGL
             if (!Gl.IsApiBound)
                 Gl.BindApi();
 #else
+            Gl.Initialize();
             Gl.BindAPI();
 #endif
 
             ViewportSize = new Size(TargetWindow.ClientSize.Width, TargetWindow.ClientSize.Height);
 
             if (AutoSetViewport)
-            {
-#if EMBEDDED_GL
-                throw new NotImplementedException(); // No viewport function
-#else
-                global::OpenGL.Gl.Viewport(0, 0, ViewportSize.Width, ViewportSize.Height);
-#endif
-            }
+                Gl.Viewport(0, 0, ViewportSize.Width, ViewportSize.Height);
 
             if (VerticalSync)
                 GLFW.Glfw.SwapInterval(1);
@@ -299,11 +295,8 @@ namespace Console3D.OpenGL
 
         private void ClearBuffer()
         {
-            //Gl.LoadIdentity();
             Gl.ClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 0.5f);
             Gl.Clear(ClearBufferMask.ColorBufferBit);
-            //glClearColor(ClearColor.R / 255.0f, ClearColor.G / 255.0f, ClearColor.B / 255.0f, 1.0f);
-            //glClear((int)ClearBufferMask.ColorBufferBit);
         }
 
         private void SwapBuffers()

@@ -61,6 +61,10 @@ namespace Console3D.OpenGL
             new KeyValuePair<string, string>(nameof(GetProgramiv), "glGetProgramiv"),
             new KeyValuePair<string, string>(nameof(Viewport), "glViewport"),
             new KeyValuePair<string, string>(nameof(GetStringpi), "glGetString"),
+            new KeyValuePair<string, string>(nameof(End), "glEnd"),
+            new KeyValuePair<string, string>(nameof(Begini), "glBegin"),
+            new KeyValuePair<string, string>(nameof(Color3f), "glColor3f"),
+            new KeyValuePair<string, string>(nameof(Vertex2f), "glVertex2f"),
 
         };
 
@@ -145,6 +149,10 @@ namespace Console3D.OpenGL
             GetProgramiv = null;
             Viewport = null;
             GetStringpi = null;
+            End = null;
+            Begini = null;
+            Color3f = null;
+            Vertex2f = null;
         }
     }
 }

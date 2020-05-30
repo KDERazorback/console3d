@@ -358,6 +358,21 @@ namespace Console3D.OpenGL
 
             BindApi();
         }
+
+        public static void Begin(PrimitiveType mode)
+        {
+            Begini((int)mode);
+        }
+
+        public static void Color3(float r, float g, float b)
+        {
+            Color3f(r, g, b);
+        }
+
+        public static void Vertex2(float x, float y)
+        {
+            Vertex2f(x, y);
+        }
     }
 }
 #endif

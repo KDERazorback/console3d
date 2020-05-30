@@ -1,4 +1,5 @@
-﻿using com.RazorSoftware.Logging;
+﻿#if !EMBEDDED_GL
+using com.RazorSoftware.Logging;
 using Console3D.OpenGL;
 using Console3D.Textures.TextureAtlas;
 using GLFW;
@@ -6,10 +7,14 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Text;
-//using global::OpenGL.Gl = Gl;
+//#if !EMBEDDED_GL
+using global::OpenGL;
+using Gl = global::OpenGL.Gl;
+using PixelFormat = global::OpenGL.PixelFormat;
+//#else
+//using PixelFormat = global::Console3D.OpenGL.PixelFormat;
+//#endif
 
 namespace Console3D
 {
@@ -188,7 +193,7 @@ namespace Console3D
 
         protected uint LoadTexture(Bitmap data, TextureWrapMode mode)
         {
-            BitmapData lockedBitmap = data.LockBits(new Rectangle(Point.Empty, data.Size), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            BitmapData lockedBitmap = data.LockBits(new Rectangle(Point.Empty, data.Size), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             byte[] buffer = new byte[lockedBitmap.Width * lockedBitmap.Height * 4];
 
             for (int i = 0; i < buffer.Length; i += 4)
@@ -207,12 +212,6 @@ namespace Console3D
 
             data.UnlockBits(lockedBitmap);
 
-#if EMBEDDED_GL
-            // TODO: Add embedded GL code here
-            uint textureId = Gl.GenTexture();
-            Gl.BindTexture(TextureTarget.Texture2d, textureId);
-            throw new NotImplementedException();
-#else
             CheckGlErrors("pre-texture-gen");
             uint textureId = Gl.GenTexture();
             Gl.ActiveTexture(TextureUnit.Texture0);
@@ -230,7 +229,6 @@ namespace Console3D
                 PixelType.UnsignedByte,
                 buffer);
             CheckGlErrors("post-texture-upload");
-#endif
 
             if (mode == TextureWrapMode.ClampToBorder)
             {
@@ -253,3 +251,4 @@ namespace Console3D
         }
     }
 }
+#endif

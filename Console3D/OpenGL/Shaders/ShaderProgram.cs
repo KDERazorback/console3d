@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 #if !EMBEDDED_GL
+using global::OpenGL;
 using Gl = global::OpenGL.Gl;
 #endif
 
@@ -75,6 +76,7 @@ namespace Console3D.OpenGL.Shaders
                 {
                     StringBuilder log = new StringBuilder(loglen);
                     Gl.GetShaderInfoLog(shaderId, loglen, out _, log);
+                    infoLog = log.ToString();
                 }
                 throw new ShaderException(this, "Shader compilation failed. Type:" + t.ToString(), infoLog);
             }

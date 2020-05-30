@@ -1,5 +1,6 @@
 ﻿using com.RazorSoftware.Logging;
 using Console3D.OpenGL;
+using Console3D.OpenGL.SamplePrograms;
 using Console3D.Textures.Text;
 using Console3D.Textures.TextureAtlas;
 using GLFW;
@@ -13,6 +14,10 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading;
+#if !EMBEDDED_GL
+using global::OpenGL;
+using Gl = global::OpenGL.Gl;
+#endif
 
 namespace Console3D
 {
@@ -51,18 +56,20 @@ namespace Console3D
             Glfw.Init();
             Glfw.WindowHint(Hint.ClientApi, ClientApi.OpenGL);
             Glfw.WindowHint(Hint.ContextVersionMajor, 3);
-            Glfw.WindowHint(Hint.ContextVersionMinor, 3);
-            Glfw.WindowHint(Hint.OpenglForwardCompatible, true);
-            Glfw.WindowHint(Hint.OpenglProfile, Profile.Core);
+            Glfw.WindowHint(Hint.ContextVersionMinor, 0);
+            //Glfw.WindowHint(Hint.OpenglForwardCompatible, true);
+            //Glfw.WindowHint(Hint.OpenglProfile, Profile.Core);
             Glfw.WindowHint(Hint.Doublebuffer, true);
             Glfw.WindowHint(Hint.Decorated, true);
 
+#if !EMBEDDED_GL
             //Gl.Initialize();
+#endif
 
             Log.WriteLine("Starting Render Thread...");
 
             OpenGL.RenderThread renderThread = new OpenGL.RenderThread(new Size(800, 600), new Size(800, 600));
-            renderThread.Asynchronous = false;
+            //renderThread.Asynchronous = false;
             renderThread.WindowTitle = "Console3D - OpenGL";
             renderThread.Initialize();
             if (!string.Equals(OpenGL.Glfw.LibraryLoadManager.AssemblyLoader.PlatformInfo.DetectedPlatformName, "windows", StringComparison.OrdinalIgnoreCase))
@@ -73,7 +80,7 @@ namespace Console3D
 
             RenderProgram program;
             //program = new ConsoleRenderProgram(renderThread);
-            program = new TriangleRenderProgram(renderThread);
+            program = new TriangleShaderRenderProgram(renderThread);
 
             Log.WriteLine("Starting render thread in %@ mode...",
                 LogLevel.Message,
