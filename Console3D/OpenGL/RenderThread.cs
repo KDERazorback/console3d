@@ -9,6 +9,7 @@ using OpenToolkit.Windowing.Desktop;
 using OpenToolkit.Graphics.OpenGL;
 using Gl = OpenToolkit.Graphics.OpenGL.GL;
 using System.Runtime.InteropServices;
+using OpenToolkit.Windowing.GraphicsLibraryFramework;
 
 namespace Console3D.OpenGL
 {
@@ -328,7 +329,7 @@ namespace Console3D.OpenGL
             if (TargetWindow != null)
                 throw new InvalidOperationException("There is already a window created for the current Render thread.");
 
-            NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = Fullscreen, StartVisible = true, StartFocused = true, Title = title, Size = new OpenToolkit.Mathematics.Vector2i(800, 600) };
+            NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = Fullscreen, StartVisible = true, StartFocused = true, Title = title, Size = new OpenToolkit.Mathematics.Vector2i(WindowSize.Width, WindowSize.Height) };
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {

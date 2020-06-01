@@ -32,7 +32,7 @@ namespace Console3D
 
             Log.WriteLine("Starting Render Thread...");
 
-            OpenGL.RenderThread renderThread = new RenderThread(new Size(800, 600), new Size(800, 600));
+            OpenGL.RenderThread renderThread = new RenderThread(new Size(960, 480), new Size(960, 480));
             renderThread.Asynchronous = false;
             renderThread.WindowTitle = "Console3D - OpenGL";
             renderThread.Initialize();

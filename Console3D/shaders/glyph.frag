@@ -6,19 +6,38 @@ precision mediump float;
 
 out vec4 FragColor;
 
-in vec2 texCoords; // X,Y
+noperspective in vec2 texCoords; // X,Y
 in vec4 backColor; // RGBA
 in vec4 foreColor; // RGBA
 
 uniform sampler2D atlasTexture;
 
-void main() {
-//    vec4 mask = texture(atlasTexture, texCoords);
-//    float maskAlpha = mask.x * mask.w;
-//
-//    vec4 finalColor = foreColor * maskAlpha;
-//    finalColor = (foreColor * foreColor.w) + (backColor * (1 - foreColor.w));
+vec4 over(vec4 ca, vec4 cb)
+{
+    float aa = ca.w;
+    float ab = cb.w;
 
-    //FragColor = finalColor;
-    FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    ca *= aa;
+    cb *= ab;
+
+    vec4 res = ca + (cb * (1 - aa));
+    res.w = aa + (ab * (1 - aa));
+
+    return res;
+}
+
+void main() {
+    vec2 coord = vec2(texCoords);
+    vec4 mask = texture(atlasTexture, coord);
+    float maskAlpha = 1 - (mask.x * mask.w);
+
+    vec4 finalColor = vec4(foreColor);
+    finalColor.w *= maskAlpha;
+
+    vec4 color = over(finalColor, backColor);
+
+    if (color.w == 0)
+        discard;
+
+    FragColor = color;
 }

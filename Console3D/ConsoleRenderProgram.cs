@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Xml;
 using Gl = OpenToolkit.Graphics.OpenGL.GL;
 using PixelFormat = OpenToolkit.Graphics.OpenGL.PixelFormat;
 
@@ -22,6 +23,7 @@ namespace Console3D
 
         public ConsoleRenderProgram(RenderThread renderer) : base(renderer)
         {
+            Renderer.AutoEnableCaps = AutoEnableCapabilitiesFlags.Blend;
         }
 
         protected void CompileShaders()
@@ -58,6 +60,8 @@ namespace Console3D
             int textureId = Gl.GenTexture();
             Gl.ActiveTexture(TextureUnit.Texture0);
             Gl.BindTexture(TextureTarget.Texture2D, textureId);
+            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
             Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)mode);
             Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)mode);
             CheckGlErrors("pre-texture-upload");
@@ -106,7 +110,9 @@ namespace Console3D
 
             LoadTextures();
 
-            Gl.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+            //Gl.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+
+            Gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
         }
 
         protected override void Renderer_Draw(RenderThread sender, FrameStageEventArgs args)
@@ -114,8 +120,8 @@ namespace Console3D
             if (!sender.IsMainThread() && !sender.Asynchronous)
                 throw new InvalidOperationException("Draw operation initiated from secondary thread when supposed to run in Sync mode.");
 
-            int cellX = sender.InternalResolution.Width / ConsoleSize.Width;
-            int cellY = sender.InternalResolution.Height / ConsoleSize.Height;
+            float cellX = sender.InternalResolution.Width / (float)ConsoleSize.Width;
+            float cellY = sender.InternalResolution.Height / (float)ConsoleSize.Height;
 
             int vao = Gl.GenVertexArray();
             Gl.BindVertexArray(vao);
@@ -130,37 +136,41 @@ namespace Console3D
             List<float> vertices = new List<float>(4096);
             List<uint> indices = new List<uint>(4096);
 
-            for (int x = 0; x < ConsoleSize.Width; x++)
-            {
-                for (int y = 0; y < ConsoleSize.Height; y++)
-                {
-                    float ox = x * cellX;
-                    float oy = y * cellY;
+            float[] b = new float[] { 0, 0, 0, 0.3f };
+            float[] f = new float[] { 1, 1, 1, 0.7f };
 
+            int vertexCount = 0;
+
+            for (int xi = 0; xi < ConsoleSize.Width; xi++)
+            {
+                float x = xi * cellX;
+                for (int yi = 0; yi < ConsoleSize.Height; yi++)
+                {
+                    float y = yi * cellY;
                     Rectangle texRec = fontAtlas.GetPointerById(65).Bounds;
 
-                    int qi = vertices.Count;
+                    int qi = vertexCount;
 
                     vertices.AddRange(new float[] { // Add vertices
-                        ox, oy,  // 0,0 (A)
+                        x, y,  // 0,0 (A)
                         texRec.X, texRec.Y, // Texture X,Y
-                        1, 0, 0, 1, // Back
-                        1, 1, 1, 1, // Fore
+                        b[0], b[1], b[2], b[3], // Back
+                        f[0], f[1], f[2], f[3], // Fore
 
-                        ox + cellX, oy, // 1,0 (B)
+                        x + cellX, y, // 1,0 (B)
                         texRec.Right, texRec.Y, // Texture X,Y
-                        1, 0, 0, 1, // Back
-                        1, 1, 1, 1, // Fore
+                        b[0], b[1], b[2], b[3], // Back
+                        f[0], f[1], f[2], f[3], // Fore
 
-                        ox + cellX, oy + cellY, // 1,1 (C)
+                        x + cellX, y + cellY, // 1,1 (C)
                         texRec.Right, texRec.Bottom, // Texture X,Y
-                        1, 0, 0, 1, // Back
-                        1, 1, 1, 1, // Fore
+                        b[0], b[1], b[2], b[3], // Back
+                        f[0], f[1], f[2], f[3], // Fore
 
-                        ox, oy + cellY, //0,1 (D)
+                        x, y + cellY, //0,1 (D)
                         texRec.X, texRec.Bottom, // Texture X,Y
-                        1, 0, 0, 1, // Back
-                        1, 1, 1, 1, // Fore
+                        b[0], b[1], b[2], b[3], // Back
+                        f[0], f[1], f[2], f[3], // Fore
                     });
 
                     indices.AddRange(new uint[]
@@ -172,6 +182,8 @@ namespace Console3D
                         (uint)(qi+2), // C
                         (uint)(qi+3), // D
                     });
+
+                    vertexCount += 4;
                 }
             }
 
@@ -233,6 +245,7 @@ namespace Console3D
 
             sender.SelectShader(glyphShader);
             sender.SetUniform("resolution", 0, 0, sender.InternalResolution.Width, sender.InternalResolution.Height);
+            sender.SetUniform("atlasSize", fontAtlas.AtlasTextureSize.Width, fontAtlas.AtlasTextureSize.Height);
             Gl.Uniform1(Gl.GetUniformLocation(glyphShader.ProgramId, "atlasTexture"), 0);
             CheckGlErrors("post-uniforms");
         }
