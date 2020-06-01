@@ -32,6 +32,15 @@ namespace Console3D
             {
                 BackColor = Color.Black;
                 ForeColor = Color.DarkGray;
+            } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                BackColor = Color.White;
+                ForeColor = Color.LightGray;
+            }
+            else
+            {
+                BackColor = Color.Black;
+                ForeColor = Color.LightGreen;
             }
         }
 

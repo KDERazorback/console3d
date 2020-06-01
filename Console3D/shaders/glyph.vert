@@ -13,7 +13,7 @@ uniform vec4 resolution; // X,Y,W,H
 uniform sampler2D atlasTexture; // Atlas
 uniform vec2 atlasSize; // W,H
 
-out vec2 texCoords; // X,Y
+noperspective out vec2 texCoords; // X,Y
 out vec4 backColor; // RGBA
 out vec4 foreColor; // RGBA
 
