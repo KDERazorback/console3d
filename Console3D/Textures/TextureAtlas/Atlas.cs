@@ -45,6 +45,11 @@ namespace Console3D.Textures.TextureAtlas
             return SortedPointers[id];
         }
 
+        public bool ContainsId(int id)
+        {
+            return SortedPointers.ContainsKey(id);
+        }
+
         public void ToFile(string bitmapFilename, string metadataFilename, ImageFormat bitmapFormat)
         {
             if (string.IsNullOrWhiteSpace(bitmapFilename))

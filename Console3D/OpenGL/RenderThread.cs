@@ -118,7 +118,8 @@ namespace Console3D.OpenGL
             set
             {
                 _fullscreen = value;
-                TargetWindow.IsFullscreen = value;
+                if (TargetWindow != null)
+                    TargetWindow.IsFullscreen = value;
             }
         }
         public bool FrameStarted { get; private set; }
@@ -187,12 +188,12 @@ namespace Console3D.OpenGL
             if (Asynchronous && Thread.CurrentThread.ManagedThreadId == Worker.ManagedThreadId)
                 return;
 
-            if (Asynchronous)
+            if (Asynchronous && Thread.CurrentThread.ManagedThreadId != Worker.ManagedThreadId)
                 Worker.Join();
 
             if (OwnsWindow)
             {
-                TargetWindow.Dispose();
+                TargetWindow?.Dispose();
                 TargetWindow = null;
             }
         }
@@ -343,6 +344,12 @@ namespace Console3D.OpenGL
                 throw new InvalidOperationException("There is already a window created for the current Render thread.");
 
             NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = Fullscreen, StartVisible = true, StartFocused = true, Title = title, Size = new OpenToolkit.Mathematics.Vector2i(WindowSize.Width, WindowSize.Height) };
+
+            if (Fullscreen)
+            {
+                settings.WindowState = OpenToolkit.Windowing.Common.WindowState.Fullscreen;
+                settings.WindowBorder = OpenToolkit.Windowing.Common.WindowBorder.Fixed;
+            }
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {

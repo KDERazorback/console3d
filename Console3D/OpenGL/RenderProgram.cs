@@ -57,9 +57,6 @@ namespace Console3D.OpenGL
         {
             Renderer.Start();
 
-            LoadTextures();
-
-
             if (!Renderer.Asynchronous)
             {
                 bool AbortMainLoop = false;
@@ -73,7 +70,7 @@ namespace Console3D.OpenGL
 
                     Renderer.ProcessEvents();
 
-                    if (Renderer.TargetWindow.IsExiting || !Renderer.IsRunning)
+                    if (Renderer.TargetWindow?.IsExiting ?? true || !Renderer.IsRunning)
                         break;
 
                     Renderer.AdvanceFrame();

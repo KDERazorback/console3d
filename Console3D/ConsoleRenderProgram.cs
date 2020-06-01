@@ -1,5 +1,6 @@
 ﻿using com.RazorSoftware.Logging;
 using Console3D.OpenGL;
+using Console3D.Textures.Text;
 using Console3D.Textures.TextureAtlas;
 using OpenToolkit.Graphics.OpenGL;
 using OpenToolkit.Windowing.Common.Input;
@@ -15,22 +16,26 @@ namespace Console3D
 {
     public class ConsoleRenderProgram : RenderProgram
     {
-        protected Size ConsoleSize = new Size(120, 30);
+        public Size ConsoleSize = new Size(120, 30);
         protected Atlas fontAtlas;
         protected int fontAtlasTexture;
         protected OpenGL.Shaders.ShaderProgram glyphShader;
         protected Logger KhronosApiLogger;
 
+        public delegate void ConsoleRenderProgramKeyEventHandler(ConsoleRenderProgram sender, ConsoleRenderProgramKeyEventArgs e);
+
+        public event ConsoleRenderProgramKeyEventHandler KeyUp;
+
         public ConsoleRenderProgram(RenderThread renderer) : base(renderer)
         {
             Renderer.AutoEnableCaps = AutoEnableCapabilitiesFlags.Blend;
 
-            Glyphs = new RenderGlyph[ConsoleSize.Width * ConsoleSize.Height];
+            Glyphs = new CircularBuffer<RenderGlyph[]>(ConsoleSize.Height);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 DefaultBackColor = Color.Black;
-                DefaultForeColor = Color.DarkGray;
+                DefaultForeColor = Color.LightGray;
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
@@ -42,6 +47,16 @@ namespace Console3D
                 DefaultBackColor = Color.Black;
                 DefaultForeColor = Color.LightGreen;
             }
+
+            BackColor = DefaultBackColor;
+            ForeColor = DefaultForeColor;
+        }
+
+        public override void Run()
+        {
+            Glyphs = new CircularBuffer<RenderGlyph[]>(ConsoleSize.Height);
+
+            base.Run();
         }
 
         public Color DefaultBackColor { get; set; }
@@ -76,34 +91,41 @@ namespace Console3D
 
         public bool ShowCursor { get; set; } = true;
 
+        public string FontName { get; set; } = "Code New Roman";
+
         
         public Color DefaultForeColor { get; set; }
 
         public Color BackColor { get; set; }
         public Color ForeColor { get; set; }
-        public bool InheritDefaultColors { get; set; }
+        public bool InheritDefaultColors { get; set; } = true;
 
-        protected RenderGlyph[] Glyphs { get; set; }
+        protected CircularBuffer<RenderGlyph[]> Glyphs { get; set; }
 
         public void Clear()
         {
-            for (int i = 0; i < Glyphs.Length; i++)
-                Glyphs[i] = null;
+            Glyphs = new CircularBuffer<RenderGlyph[]>(ConsoleSize.Height);
         }
 
         public RenderGlyph GetGlyph(int x, int y)
         {
-            return Glyphs[GetGlyphAddress(x, y)];
+            return Glyphs.ElementAt(y)?[x] ?? null;
         }
 
         public void SetGlyph(int x, int y, RenderGlyph glyph)
         {
-            Glyphs[GetGlyphAddress(x, y)] = glyph;
+            if (Glyphs[y] == null)
+                Glyphs[y] = new RenderGlyph[ConsoleSize.Width];
+
+            Glyphs[y][x] = glyph;
         }
 
         public void SetGlyph(int x, int y, char value)
         {
-            Glyphs[GetGlyphAddress(x, y)] = new RenderGlyph(value);
+            if (Glyphs[y] == null)
+                Glyphs[y] = new RenderGlyph[ConsoleSize.Width];
+
+            Glyphs[y][x] = new RenderGlyph(value);
         }
 
         public void Write(string text)
@@ -112,6 +134,8 @@ namespace Console3D
             {
                 if (Cursor.X >= ConsoleSize.Width)
                     Cursor = new Point(0, Cursor.Y + 1);
+                if (Cursor.Y >= ConsoleSize.Height)
+                    Cursor = new Point(Cursor.X, ConsoleSize.Height - 1);
 
                 RenderGlyph glyph = new RenderGlyph(text[i]);
 
@@ -121,13 +145,23 @@ namespace Console3D
                     glyph.Foreground = ForeColor;
                 }
 
-                int address = GetGlyphAddress(Cursor.X, Cursor.Y);
-                Glyphs[address] = glyph;
+                SetGlyph(Cursor.X, Cursor.Y, glyph);
 
                 if (Cursor.X + 1 < ConsoleSize.Width)
                     Cursor = new Point(Cursor.X + 1, Cursor.Y);
                 else
                     Cursor = new Point(0, Cursor.Y + 1);
+
+                if (Cursor.Y >= ConsoleSize.Height)
+                {
+                    Cursor = new Point(Cursor.X, ConsoleSize.Height - 1);
+                    Glyphs.Rotate(1);
+                    if (Glyphs[Cursor.Y] != null)
+                    {
+                        for (int w = 0; w < Glyphs[Cursor.Y].Length; w++)
+                            Glyphs[Cursor.Y][w] = null;
+                    }
+                }
             }
         }
 
@@ -140,6 +174,17 @@ namespace Console3D
         public void WriteLine()
         {
             Cursor = new Point(0, Cursor.Y + 1);
+
+            if (Cursor.Y >= ConsoleSize.Height)
+            {
+                Cursor = new Point(Cursor.X, ConsoleSize.Height - 1);
+                Glyphs.Rotate(1);
+                if (Glyphs[Cursor.Y] != null)
+                {
+                    for (int w = 0; w < Glyphs[Cursor.Y].Length; w++)
+                        Glyphs[Cursor.Y][w] = null;
+                }
+            }
         }
 
         protected float[] ColorToFloatArray(Color c)
@@ -160,11 +205,6 @@ namespace Console3D
             glyphShader = OpenGL.Shaders.ShaderProgram.FromFiles("./shaders/glyph.vert", "./shaders/glyph.frag");
             glyphShader.Compile();
             Log.WriteLine("Shader compilation completed.");
-        }
-
-        protected int GetGlyphAddress(int x, int y)
-        {
-            return x + (y * ConsoleSize.Width);
         }
 
         protected int LoadTexture(Bitmap data, TextureWrapMode mode)
@@ -192,8 +232,8 @@ namespace Console3D
             int textureId = Gl.GenTexture();
             Gl.ActiveTexture(TextureUnit.Texture0);
             Gl.BindTexture(TextureTarget.Texture2D, textureId);
-            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
             Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)mode);
             Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)mode);
             CheckGlErrors("pre-texture-upload");
@@ -223,10 +263,10 @@ namespace Console3D
         {
             Log.WriteLine("Loading textures...");
 
-            Log.WriteLine("Loading font atlas 'Code New Roman'...");
+            Log.WriteLine($"Loading font atlas '{FontName}'...");
             fontAtlas = Atlas.FromFile(
-                FontAtlas.GetAtlasFileFromName("./cache/fonts", "Code New Roman").FullName,
-                FontAtlas.GetAtlasMetadataFileFromName("./cache/fonts", "Code New Roman").FullName
+                FontAtlas.GetAtlasFileFromName("./cache/fonts", FontName).FullName,
+                FontAtlas.GetAtlasMetadataFileFromName("./cache/fonts", FontName).FullName
             );
 
             fontAtlasTexture = LoadTexture(fontAtlas.Data, TextureWrapMode.ClampToBorder);
@@ -288,7 +328,14 @@ namespace Console3D
                     }
 
                     float y = yi * cellY;
-                    Rectangle texRec = fontAtlas.GetPointerById((int)(glyphData?.Glyph ?? ' ')).Bounds;
+                    Rectangle texRec = Rectangle.Empty;
+                    int glyphId = (int)(glyphData?.Glyph ?? ' ');
+                    if (fontAtlas.ContainsId(glyphId))
+                        texRec = fontAtlas.GetPointerById(glyphId).Bounds;
+                    else if (fontAtlas.ContainsId(0x558))
+                        texRec = fontAtlas.GetPointerById(0x558).Bounds;
+                    else
+                        texRec = fontAtlas.GetPointerById((int)'?').Bounds;
 
                     float[] b = glyphData == null || !glyphData.Background.HasValue ? db : ColorToFloatArray(glyphData.Background.Value);
                     float[] f = glyphData == null || !glyphData.Foreground.HasValue ? df : ColorToFloatArray(glyphData.Foreground.Value);
@@ -405,9 +452,12 @@ namespace Console3D
 
         private void TargetWindow_KeyUp(OpenToolkit.Windowing.Common.KeyboardKeyEventArgs obj)
         {
-            char c = (char)(obj.Key - 19);
-            string cval = ((int)obj.Key).ToString("X2");
-            Log.WriteLine($"0x{cval} {obj.Key} -> {c}");
+            ConsoleRenderProgramKeyEventArgs args = new ConsoleRenderProgramKeyEventArgs(obj);
+
+            OnKeyUp(args);
+
+            if (args.Intercept)
+                return;
 
             if (obj.Key == Key.Enter || obj.Key == Key.KeypadEnter)
             {
@@ -429,6 +479,11 @@ namespace Console3D
 
             if (character.HasValue)
                 Write(new string(character.Value, 1));
+        }
+
+        protected virtual void OnKeyUp(ConsoleRenderProgramKeyEventArgs e)
+        {
+            KeyUp?.Invoke(this, e);
         }
     }
 }

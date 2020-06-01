@@ -13,6 +13,8 @@ namespace Console3D
 {
     public static class Program
     {
+        private static bool restartGraphicsProgram = false;
+
         public static int Main(string[] args)
         {
             Log.Initialize(true);
@@ -37,16 +39,28 @@ namespace Console3D
             renderThread.WindowTitle = "Console3D - OpenGL";
             renderThread.Initialize();
 
-            RenderProgram program;
+            ConsoleRenderProgram program;
             program = new ConsoleRenderProgram(renderThread);
+            program.FontName = "Unifont";
+            program.KeyUp += Program_KeyUp;
 
             Log.WriteLine("Starting render thread in %@ mode...",
                 LogLevel.Message,
                 renderThread.Asynchronous ? "Asynchronous" : "Synchronous");
 
+            RzLogAdapter adapter = new RzLogAdapter(program);
+            Log.AttachOutput(adapter);
+
             program.Run();
 
             // Main thread is free
+
+            while (restartGraphicsProgram && !renderThread.Asynchronous)
+            {
+                restartGraphicsProgram = false;
+                program.Stop();
+                program.Run();
+            }
             while (renderThread.Asynchronous && !Console.KeyAvailable && renderThread.IsRunning)
             {
                 if (!renderThread.AutoEventPolling)
@@ -70,6 +84,44 @@ namespace Console3D
             program.Dispose();
 
             return 0;
+        }
+
+        private static void Program_KeyUp(ConsoleRenderProgram sender, ConsoleRenderProgramKeyEventArgs e)
+        {
+            // DEBUG: Print key to the general log
+            char c = (char)(e.Key - 19);
+            string cval = ((int)e.Key).ToString("X2");
+            Log.WriteLine($"0x{cval} {e.Key} -> {c}");
+
+            e.Intercept = true;
+
+            if (e.Key == OpenToolkit.Windowing.Common.Input.Key.Escape)
+                sender.Stop();
+
+            if (e.Key == OpenToolkit.Windowing.Common.Input.Key.F11)
+            {
+                restartGraphicsProgram = true;
+                sender.Stop();
+                sender.Renderer.Fullscreen = !sender.Renderer.Fullscreen;
+
+                if (sender.Renderer.Fullscreen)
+                {
+                    sender.Renderer.InternalResolution = new Size(1280, 1024);
+                    sender.ConsoleSize = new Size(300, 75);
+                }
+                else
+                {
+                    sender.Renderer.InternalResolution = new Size(960, 480);
+                    sender.ConsoleSize = new Size(120, 30);
+                }
+            }
+
+            if (e.Key == OpenToolkit.Windowing.Common.Input.Key.F1)
+            {
+                sender.ForeColor = Color.Cyan;
+                Log.WriteLine("Colored line sample here");
+                sender.ForeColor = sender.DefaultForeColor;
+            }
         }
 
         private static void CheckRasterFonts(string fontsDirectory = "./fonts", string rasterDirectory = "./cache/fonts")
@@ -106,7 +158,7 @@ namespace Console3D
 
             Log.WriteLine("Loaded %@ fonts into the application.", LogLevel.Message, FontLoader.LoadedFonts.Length.ToString("N0"));
 
-            GdiFontRasterizer rasterizer = new GdiFontRasterizer(true, false, false);
+            GdiFontRasterizer rasterizer = new GdiFontRasterizer(true, true, true);
             foreach (FontFamily family in FontLoader.LoadedFonts)
             {
                 FileInfo targetFile = FontAtlas.GetAtlasFileFromName(cacheDir.FullName, family.Name);
