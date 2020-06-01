@@ -4,8 +4,8 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Text;
 #if !EMBEDDED_GL
-using global::OpenGL;
-using Gl = global::OpenGL.Gl;
+using OpenToolkit.Graphics.OpenGL;
+using Gl = OpenToolkit.Graphics.OpenGL.GL;
 #endif
 
 namespace Console3D.OpenGL
@@ -39,13 +39,10 @@ namespace Console3D.OpenGL
                 OpenGL.Gl.BindApi();
             KhronosVersion ver = Gl.CurrentVersion;
             ContextCreationEventArgs args = new ContextCreationEventArgs(ver.Api, new Version(ver.Major, ver.Minor, ver.Revision), ver.ToString(), ver.Profile, Gl.CurrentVendor);
-#else
-            Khronos.KhronosVersion ver = Gl.CurrentVersion;
-            ContextCreationEventArgs args = new ContextCreationEventArgs(ver.Api, new Version(ver.Major, ver.Minor, ver.Revision), ver.ToString(), ver.Profile, Gl.CurrentVendor);
 #endif
 
 
-            Renderer_ContextCreated(sender, args);
+            Renderer_ContextCreated(sender, null);
         }
         protected virtual void Renderer_ContextCreated(RenderThread sender, ContextCreationEventArgs args) { }
 
@@ -55,12 +52,12 @@ namespace Console3D.OpenGL
 
         protected virtual void Renderer_DrawPrepare(RenderThread sender, FrameStageControllerEventArgs args) { }
 
-        protected static void CheckGlErrors(string stage)
+        public static void CheckGlErrors(string stage)
         {
             ErrorCode code = Gl.GetError();
 
-            if (code != ErrorCode.NoError)
-                throw new System.Exception(string.Format("OpenGL Draw error on stage {0}: {1}", stage, code.ToString()));
+            //if (code != ErrorCode.NoError)
+                //throw new System.Exception(string.Format("OpenGL Draw error on stage {0}: {1}", stage, code.ToString()));
         }
 
         protected virtual void LoadTextures() { }

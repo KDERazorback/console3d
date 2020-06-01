@@ -2,15 +2,15 @@
 using System.IO;
 using System.Text;
 #if !EMBEDDED_GL
-using global::OpenGL;
-using Gl = global::OpenGL.Gl;
+using OpenToolkit.Graphics.OpenGL;
+using Gl = OpenToolkit.Graphics.OpenGL.GL;
 #endif
 
 namespace Console3D.OpenGL.Shaders
 {
     public class ShaderProgram : IDisposable
     {
-        public uint ProgramId { get; protected set; }
+        public int ProgramId { get; protected set; }
         public string VertexShaderCode { get; }
         public string FragmentShaderCode { get; }
         public bool Compiled { get; protected set; }
@@ -31,14 +31,14 @@ namespace Console3D.OpenGL.Shaders
                 throw new ArgumentException("The FragmentShader code is empty or cannot be parsed.");
         }
 
-        public uint Compile()
+        public int Compile()
         {
             if (Compiled)
                 throw new InvalidOperationException("Cannot compile shader because its aready compiled and loaded into the GPU.");
 
-            uint vertexId = 0;
-            uint fragmentId = 0;
-            uint programId = 0;
+            int vertexId = 0;
+            int fragmentId = 0;
+            int programId = 0;
 
             try
             {
@@ -62,21 +62,21 @@ namespace Console3D.OpenGL.Shaders
             return programId;
         }
 
-        protected uint CompileShaderSource(ShaderType t, string code)
+        protected int CompileShaderSource(ShaderType t, string code)
         {
-            uint shaderId = Gl.CreateShader(t);
-            Gl.ShaderSource(shaderId, new string[] { code });
+            int shaderId = Gl.CreateShader(t);
+            Gl.ShaderSource(shaderId, code);
             Gl.CompileShader(shaderId);
-            Gl.GetShader(shaderId, ShaderParameterName.CompileStatus, out int success);
+            Gl.GetShader(shaderId, ShaderParameter.CompileStatus, out int success);
             if (success < 1)
             {
                 string infoLog = null;
-                Gl.GetShader(shaderId, ShaderParameterName.InfoLogLength, out int loglen);
+                Gl.GetShader(shaderId, ShaderParameter.InfoLogLength, out int loglen);
                 if (loglen > 0)
                 {
-                    StringBuilder log = new StringBuilder(loglen);
-                    Gl.GetShaderInfoLog(shaderId, loglen, out _, log);
-                    infoLog = log.ToString();
+                    string log;
+                    Gl.GetShaderInfoLog(shaderId, loglen, out _, out log);
+                    infoLog = log;
                 }
                 throw new ShaderException(this, "Shader compilation failed. Type:" + t.ToString(), infoLog);
             }
@@ -84,31 +84,46 @@ namespace Console3D.OpenGL.Shaders
             return shaderId;
         }
 
-        protected uint LinkShaderProgram(uint vertexId, uint fragmentId)
+        protected int LinkShaderProgram(int vertexId, int fragmentId)
         {
-            uint programId = Gl.CreateProgram();
+            int programId = Gl.CreateProgram();
             Gl.AttachShader(programId, vertexId);
             Gl.AttachShader(programId, fragmentId);
             Gl.LinkProgram(programId);
 
-            Gl.GetProgram(programId, ProgramProperty.LinkStatus, out int success);
+            Gl.GetProgram(programId, GetProgramParameterName.LinkStatus, out int success);
             if (success < 1)
             {
                 string infoLog = null;
-                Gl.GetProgram(programId, ProgramProperty.InfoLogLength, out int loglen);
+                Gl.GetProgram(programId, GetProgramParameterName.InfoLogLength, out int loglen);
                 if (loglen > 0)
                 {
-                    StringBuilder log = new StringBuilder(loglen);
-                    Gl.GetProgramInfoLog(programId, loglen, out _, log);
-                    infoLog = log.ToString();
+                    string log;
+                    Gl.GetProgramInfoLog(programId, loglen, out _, out log);
+                    infoLog = log;
                 }
                 throw new ShaderException(this, "Program Link failed.", infoLog);
             }
 
+            //Gl.ValidateProgram(programId);
+            //Gl.GetProgram(programId, ProgramProperty.ValidateStatus, out success);
+            //if (success < 1)
+            //{
+            //    string infoLog = null;
+            //    Gl.GetProgram(programId, ProgramProperty.InfoLogLength, out int loglen);
+            //    if (loglen > 0)
+            //    {
+            //        StringBuilder log = new StringBuilder(loglen);
+            //        Gl.GetProgramInfoLog(programId, loglen, out _, log);
+            //        infoLog = log.ToString();
+            //    }
+            //    throw new ShaderException(this, "Program Validation failed.", infoLog);
+            //}
+
             return programId;
         }
 
-        protected void DestroyShader(uint shaderId)
+        protected void DestroyShader(int shaderId)
         {
             Gl.DeleteShader(shaderId);
         }

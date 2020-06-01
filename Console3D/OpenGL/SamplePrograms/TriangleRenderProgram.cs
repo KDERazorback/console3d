@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
 #if !EMBEDDED_GL
-using global::OpenGL;
-using Gl = global::OpenGL.Gl;
+using OpenToolkit.Graphics.OpenGL;
+using Gl = OpenToolkit.Graphics.OpenGL.GL;
 #endif
 
 namespace Console3D.OpenGL.SamplePrograms
@@ -19,7 +19,7 @@ namespace Console3D.OpenGL.SamplePrograms
 
         protected override void Renderer_ContextCreated(RenderThread sender, ContextCreationEventArgs args)
         {
-            uint vao = Gl.GenBuffer();
+            int vao = Gl.GenBuffer();
             Gl.BindVertexArray(vao);
         }
 

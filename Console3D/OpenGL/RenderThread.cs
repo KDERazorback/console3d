@@ -1,5 +1,4 @@
-﻿using GLFW;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -7,9 +6,10 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using Console3D.OpenGL.Shaders;
+using OpenToolkit.Windowing.Desktop;
 #if !EMBEDDED_GL
-using global::OpenGL;
-using Gl = global::OpenGL.Gl;
+using OpenToolkit.Graphics.OpenGL;
+using Gl = OpenToolkit.Graphics.OpenGL.GL;
 #endif
 
 namespace Console3D.OpenGL
@@ -45,7 +45,7 @@ namespace Console3D.OpenGL
 
         public Thread Worker { get; private set; }
         private bool AbortFlag = false;
-        public NativeWindow TargetWindow { get; private set; }
+        public ConsoleNativeWindow TargetWindow { get; private set; }
         public Size ViewportSize { get; private set; }
         public Color ClearColor { get; set; } = Color.CornflowerBlue;
         public Size WindowSize { get; private set; }
@@ -72,14 +72,14 @@ namespace Console3D.OpenGL
         {
             get
             {
-                if (TargetWindow == null || TargetWindow.Handle == IntPtr.Zero)
+                if (TargetWindow == null)
                     return _initialWindowTitle;
 
                 return TargetWindow.Title;
             }
             set
             {
-                if (TargetWindow == null || TargetWindow.Handle == IntPtr.Zero)
+                if (TargetWindow == null)
                 {
                     _initialWindowTitle = value;
                     return;
@@ -122,9 +122,9 @@ namespace Console3D.OpenGL
         public bool FrameStarted { get; private set; }
         public ShaderProgram ActiveShaderProgram { get; private set; }
 
-        public RenderThread(NativeWindow wnd, Size internalRes)
+        public RenderThread(ConsoleNativeWindow wnd, Size internalRes)
         {
-            if (wnd == null || wnd.Handle == IntPtr.Zero)
+            if (wnd == null)
                 throw new ArgumentException("Invalid window specified.");
 
             OwnsWindow = false;
@@ -167,7 +167,7 @@ namespace Console3D.OpenGL
 
             if (OwnsWindow)
             {
-                GLFW.Glfw.DestroyWindow(TargetWindow);
+                TargetWindow.Dispose();
                 TargetWindow = null;
             }
         }
@@ -180,33 +180,34 @@ namespace Console3D.OpenGL
             if (TargetWindow == null)
                 CreateMainWindow(WindowTitle);
 
-            GLFW.Glfw.MakeContextCurrent(TargetWindow);
+            TargetWindow.MakeCurrent();
 
 
 #if EMBEDDED_GL
             if (!Gl.IsApiBound)
                 Gl.BindApi();
 #else
-            Gl.Initialize();
-            Gl.BindAPI();
+            //Gl.Initialize();
+            //Gl.BindAPI();
 #endif
 
-            ViewportSize = new Size(TargetWindow.ClientSize.Width, TargetWindow.ClientSize.Height);
+            ViewportSize = new Size(TargetWindow.ClientSize.X, TargetWindow.ClientSize.Y);
 
             if (AutoSetViewport)
                 Gl.Viewport(0, 0, ViewportSize.Width, ViewportSize.Height);
 
-            if (VerticalSync)
-                GLFW.Glfw.SwapInterval(1);
-            else
-                GLFW.Glfw.SwapInterval(0);
+
+            //if (VerticalSync)
+            //    GLFW.Glfw.SwapInterval(1);
+            //else
+            //    GLFW.Glfw.SwapInterval(0);
 
             if (AutoEnableCaps.HasFlag(AutoEnableCapabilitiesFlags.Blend))
                 Gl.Enable(EnableCap.Blend);
 
             OnContextCreated();
 
-            _lastFrameTimeValue = GLFW.Glfw.TimerValue;
+            _lastFrameTimeValue = 0; // TODO: Set here a timer value!
             _timeSinceLastFrame = 0;
             _frameIndex = 0;
 
@@ -214,7 +215,7 @@ namespace Console3D.OpenGL
 
             if (Asynchronous)
             {
-                while (!GLFW.Glfw.WindowShouldClose(TargetWindow) && !AbortFlag)
+                while (!TargetWindow.IsExiting && !AbortFlag)
                 {
                     AdvanceFrame();
                 }
@@ -227,7 +228,7 @@ namespace Console3D.OpenGL
         {
             if (_frameIndex > 0)
             {
-                _currFrameTimerValue = GLFW.Glfw.TimerValue;
+                _currFrameTimerValue = 0; // TODO: Set here a timer value!
                 _timeSinceLastFrame = (ulong)((_currFrameTimerValue - _lastFrameTimeValue) * SystemTimerResolution);
                 _totalFrameTime += _timeSinceLastFrame;
             }
@@ -301,7 +302,7 @@ namespace Console3D.OpenGL
 
         private void SwapBuffers()
         {
-            GLFW.Glfw.SwapBuffers(TargetWindow);
+            TargetWindow.SwapBuffers();
         }
 
         private void SleepThread()
@@ -314,7 +315,9 @@ namespace Console3D.OpenGL
             if (TargetWindow != null)
                 throw new InvalidOperationException("There is already a window created for the current Render thread.");
 
-            TargetWindow = new NativeWindow(WindowSize.Width, WindowSize.Height, title, (Fullscreen ? GLFW.Glfw.PrimaryMonitor : GLFW.Monitor.None), Window.None);
+            //TargetWindow = new NativeWindow(WindowSize.Width, WindowSize.Height, title, (Fullscreen ? GLFW.Glfw.PrimaryMonitor : GLFW.Monitor.None), Window.None);
+            NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = false, StartVisible = true, StartFocused = true, Title = title, Size = new OpenToolkit.Mathematics.Vector2i(800, 600) };
+            TargetWindow = new ConsoleNativeWindow(settings);
         }
 
         public void CreateMainWindow()
@@ -324,18 +327,17 @@ namespace Console3D.OpenGL
 
         public void ProcessEvents()
         {
-            GLFW.Glfw.PollEvents();
+            TargetWindow.ProcessEvents();
         }
 
         public void Shutdown()
         {
-            GLFW.Glfw.Terminate();
             Initialized = false;
         }
 
         public void Initialize()
         {
-            SystemTimerResolution = 1000000d / GLFW.Glfw.TimerFrequency;
+            SystemTimerResolution = 1000000d / 10000000d;
 
             Worker = new Thread(WorkerMain);
             Worker.IsBackground = true;
@@ -346,8 +348,8 @@ namespace Console3D.OpenGL
 
         public void ProbeWindowSystem()
         {
-            NativeWindow wnd = new NativeWindow(400, 300, "GLFW: Probe Window. === Loading... ===");
-            wnd.Dispose();
+            //NativeWindow wnd = new NativeWindow(400, 300, "GLFW: Probe Window. === Loading... ===");
+            //wnd.Dispose();
         }
 
         public bool IsMainThread()
@@ -431,9 +433,9 @@ namespace Console3D.OpenGL
             {
                 if (disposing)
                 {
-                    if (OwnsWindow && TargetWindow != null && TargetWindow.Handle != IntPtr.Zero)
+                    if (OwnsWindow && TargetWindow != null)
                     {
-                        GLFW.Glfw.DestroyWindow(TargetWindow);
+                        TargetWindow.Dispose();
                         TargetWindow = null;
                     }
                 }

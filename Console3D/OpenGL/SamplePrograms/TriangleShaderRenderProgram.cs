@@ -3,8 +3,8 @@ using Console3D.OpenGL.Shaders;
 using System;
 using System.IO;
 #if !EMBEDDED_GL
-using global::OpenGL;
-using Gl = global::OpenGL.Gl;
+using OpenToolkit.Graphics.OpenGL;
+using Gl = OpenToolkit.Graphics.OpenGL.GL;
 #endif
 
 namespace Console3D.OpenGL
@@ -15,23 +15,24 @@ namespace Console3D.OpenGL
         uint[] indices;
         ShaderProgram shader;
 
-        uint VAO, VBO, EBO;
+        int VAO, VBO, EBO;
 
         public TriangleShaderRenderProgram(RenderThread renderer) : base(renderer) 
         {
             Renderer.AutoClearFrames = false;
             Renderer.AutoEnableCaps = AutoEnableCapabilitiesFlags.None;
+            Renderer.AutoSetViewport = false;
         }
 
         protected override void Renderer_ContextCreated(RenderThread sender, ContextCreationEventArgs args)
         {
-            Log.WriteLine("Context created. Using: " + args.ToString());
+            Log.WriteLine("Context created. Using: " + Gl.GetString(StringName.Renderer) + Gl.GetString(StringName.Version));
 
             Log.WriteLine("Renderer_ContextCreated");
             CheckGlErrors("Renderer_ContextCreated:Start");
 
             // Set window resize callback
-            GLFW.Glfw.SetFramebufferSizeCallback(Renderer.TargetWindow, Framebuffer_SizeCallback);
+            //GLFW.Glfw.SetFramebufferSizeCallback(Renderer.TargetWindow, Framebuffer_SizeCallback);
 
             // Load Shaders
             string vertex = File.ReadAllText("./shaders/hello.vert".Replace('/', Path.DirectorySeparatorChar));
@@ -40,7 +41,7 @@ namespace Console3D.OpenGL
             // Compile shaders
             Log.WriteLine("Compiling shader 'hello'...");
             shader = new Shaders.ShaderProgram(vertex, fragment);
-            uint shaderId = shader.Compile();
+            int shaderId = shader.Compile();
             Log.WriteLine("Compiled shader index: %@", LogLevel.Message, shader.ProgramId);
 
             CheckGlErrors("Renderer_ContextCreated:AfterShaders");
@@ -68,11 +69,15 @@ namespace Console3D.OpenGL
             // Setup VBO (vertices)
             VBO = Gl.GenBuffer();
             Gl.BindBuffer(BufferTarget.ArrayBuffer, VBO);
-            
-            uint size = (uint)(sizeof(float) * vertices.Length); // size must be 48
-            Gl.BufferData(BufferTarget.ArrayBuffer, size, vertices, BufferUsage.StaticDraw);
+
+            int size = (sizeof(float) * vertices.Length); // size must be 48
+            Gl.BufferData(BufferTarget.ArrayBuffer, size, vertices, BufferUsageHint.StaticDraw);
+            CheckGlErrors("Renderer_ContextCreated:AfterBufferDataVBO");
+
+            Gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            CheckGlErrors("Renderer_ContextCreated:AfterVAP_VBO");
+
             Gl.EnableVertexAttribArray(0);
-            Gl.VertexAttribPointer(0, 3, VertexAttribType.Float, false, 3 * sizeof(float), 0);
 
             CheckGlErrors("Renderer_ContextCreated:AfterVBO");
 
@@ -80,8 +85,8 @@ namespace Console3D.OpenGL
             // Setup EBO (indices)
             EBO = Gl.GenBuffer();
             Gl.BindBuffer(BufferTarget.ElementArrayBuffer, EBO);
-            size = (uint)(sizeof(float) * indices.Length); // Must be 24
-            Gl.BufferData(BufferTarget.ElementArrayBuffer, size, indices, BufferUsage.StaticDraw);
+            size = (sizeof(float) * indices.Length); // Must be 24
+            Gl.BufferData(BufferTarget.ElementArrayBuffer, size, indices, BufferUsageHint.StaticDraw);
 
             CheckGlErrors("Renderer_ContextCreated:AfterEBO");
 
@@ -100,7 +105,7 @@ namespace Console3D.OpenGL
 
 
             Gl.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            Gl.Clear(ClearBufferMask.ColorBufferBit);
+            Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             CheckGlErrors("Renderer_Draw:Clear");
 
 

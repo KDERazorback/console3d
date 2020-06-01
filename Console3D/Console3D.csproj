@@ -4,14 +4,24 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <OutputType>Exe</OutputType>
     <StartupObject>Console3D.Program</StartupObject>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DefineConstants>TRACE;DEBUG;NETCOREAPP;NETCOREAPP3_1;EMBEDDED_GL</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NETCOREAPP;NETCOREAPP3_1</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DefineConstants>TRACE;DEBUG;NETCOREAPP;NETCOREAPP3_1</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
@@ -20,14 +30,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="glfw" Version="3.3.2" />
-    <PackageReference Include="glfw-net" Version="3.3.1" />
+    <PackageReference Include="OpenTK" Version="4.0.0-pre9.1" />
     <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
     <PackageReference Include="com.razorsoftware.logging.core" Version="1.0.4.6-beta" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\OpenGL.Net-0.8.4\OpenGL.Net\OpenGL.Net_netcore2.0.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -105,6 +110,9 @@
     </None>
     <None Update="shaders\hello.vert">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="WrapperGLFW.dll.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 </Project>
