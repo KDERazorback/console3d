@@ -32,7 +32,9 @@ namespace Console3D.OpenGL
 
             int major = int.Parse(verSegments[0].Trim());
             int minor = int.Parse(verSegments[1].Trim());
-            int rev = int.Parse(verSegments[2].Trim());
+            int rev = 0;
+            if (verSegments.Length >= 3)
+                rev = int.Parse(verSegments[2].Trim());
 
             string profile = "OpenTK";
             string api = "Gl";

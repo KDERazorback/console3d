@@ -47,9 +47,6 @@ namespace Console3D.OpenGL
         {
             ErrorCode code = Gl.GetError();
 
-            //if (code == ErrorCode.NoError)
-            //    throw new Exception("Eureka!");
-
             if (code != ErrorCode.NoError)
                 throw new Exception(string.Format("OpenGL Draw error on stage {0}: {1}", stage, code.ToString()));
         }

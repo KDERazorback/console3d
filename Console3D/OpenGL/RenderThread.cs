@@ -8,6 +8,7 @@ using Console3D.OpenGL.Shaders;
 using OpenToolkit.Windowing.Desktop;
 using OpenToolkit.Graphics.OpenGL;
 using Gl = OpenToolkit.Graphics.OpenGL.GL;
+using System.Runtime.InteropServices;
 
 namespace Console3D.OpenGL
 {
@@ -328,6 +329,14 @@ namespace Console3D.OpenGL
                 throw new InvalidOperationException("There is already a window created for the current Render thread.");
 
             NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = Fullscreen, StartVisible = true, StartFocused = true, Title = title, Size = new OpenToolkit.Mathematics.Vector2i(800, 600) };
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                settings.API = OpenToolkit.Windowing.Common.ContextAPI.OpenGL;
+                settings.APIVersion = new Version(3, 3, 0, 0);
+                settings.Flags |= OpenToolkit.Windowing.Common.ContextFlags.ForwardCompatible;
+                settings.Profile = OpenToolkit.Windowing.Common.ContextProfile.Core;
+            }
             TargetWindow = new RenderWindow(settings);
         }
 
