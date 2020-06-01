@@ -98,6 +98,7 @@ namespace Console3D
             }
         }
 
+        public float BlinkInterval { get; set; } = 500; // In Milliseconds
         public Color ForeColor { get; set; }
         protected RenderGlyph[] Glyphs { get; set; }
         public void Clear()
@@ -258,6 +259,13 @@ namespace Console3D
                 {
                     RenderGlyph glyphData = GetGlyph(xi, yi);
 
+                    if (xi == Cursor.X && yi == Cursor.Y && glyphData == null)
+                    {
+                        int val = (int)((args.CurrentTime.TotalRuntime / 1000.0f) / BlinkInterval);
+                        if (val % 2 == 0)
+                            glyphData = new RenderGlyph('_');
+                    }
+
                     float y = yi * cellY;
                     Rectangle texRec = fontAtlas.GetPointerById((int)(glyphData?.Glyph ?? ' ')).Bounds;
 
@@ -395,7 +403,10 @@ namespace Console3D
                 int address = GetGlyphAddress(Cursor.X, Cursor.Y);
                 Glyphs[address] = new RenderGlyph(text[i]);
 
-                Cursor = new Point(Cursor.X + 1, Cursor.Y);
+                if (Cursor.X + 1 < ConsoleSize.Width)
+                    Cursor = new Point(Cursor.X + 1, Cursor.Y);
+                else
+                    Cursor = new Point(0, Cursor.Y + 1);
             }
         }
     }

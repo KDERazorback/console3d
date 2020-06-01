@@ -26,6 +26,7 @@ namespace Console3D.OpenGL
         private Size _internalResolution = new Size(800, 600);
         private bool _fullscreen = false;
         private bool _wireframeMode = false;
+        private Stopwatch _systemTimer;
 
         public delegate void FrameStageEventDelegate(RenderThread sender, FrameStageEventArgs args);
         public delegate void FrameStageControllerEventDelegate(RenderThread sender, FrameStageControllerEventArgs args);
@@ -150,6 +151,7 @@ namespace Console3D.OpenGL
             OwnsWindow = false;
             TargetWindow = wnd;
             InternalResolution = internalRes;
+            _systemTimer = new Stopwatch();
         }
 
         public RenderThread(Size windowSize, Size internalRes)
@@ -162,6 +164,7 @@ namespace Console3D.OpenGL
             OwnsWindow = true;
             WindowSize = windowSize;
             InternalResolution = internalRes;
+            _systemTimer = new Stopwatch();
         }
 
         public void Start()
@@ -179,6 +182,8 @@ namespace Console3D.OpenGL
         {
             AbortFlag = true;
 
+            _systemTimer.Stop();
+
             if (Asynchronous && Thread.CurrentThread.ManagedThreadId == Worker.ManagedThreadId)
                 return;
 
@@ -192,6 +197,11 @@ namespace Console3D.OpenGL
             }
         }
 
+        public void ResetRenderTimer()
+        {
+            _systemTimer.Reset();
+        }
+
         private void WorkerMain()
         {
             if (!Initialized)
@@ -199,6 +209,9 @@ namespace Console3D.OpenGL
 
             if (TargetWindow == null)
                 CreateMainWindow(WindowTitle);
+
+            _systemTimer.Start();
+            SystemTimerResolution = 1000000d / Stopwatch.Frequency;
 
             TargetWindow.MakeCurrent();
 
@@ -242,7 +255,7 @@ namespace Console3D.OpenGL
         {
             if (_frameIndex > 0)
             {
-                _currFrameTimerValue = 0; // TODO: Set here a timer value!
+                _currFrameTimerValue = (ulong)_systemTimer.ElapsedTicks; // TODO: Set here a timer value!
                 _timeSinceLastFrame = (ulong)((_currFrameTimerValue - _lastFrameTimeValue) * SystemTimerResolution);
                 _totalFrameTime += _timeSinceLastFrame;
             }
