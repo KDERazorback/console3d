@@ -65,7 +65,7 @@ namespace Console3D.Textures.Text
             Bitmap buffer = new Bitmap(1024, 1024, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             Graphics device = Graphics.FromImage(buffer);
             device.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixel;
-            SizeF lastGlyphSize = SizeF.Empty;
+            SizeF lastGlyphSize = device.MeasureString("X", SelectedFont, PointF.Empty, StringFormat.GenericTypographic);
             foreach (var info in UnicodeTableData)
             {
                 try
@@ -108,9 +108,6 @@ namespace Console3D.Textures.Text
                             warnings++;
                         }
                     }
-
-                    if (info.CodePoint == 32)
-                        continue; // Skip white-space
 
                     if (glyphSize.Width < 1 || glyphSize.Height < 1)
                     {

@@ -2,12 +2,13 @@
 using Console3D.OpenGL;
 using Console3D.Textures.TextureAtlas;
 using OpenToolkit.Graphics.OpenGL;
+using OpenToolkit.Windowing.Common.Input;
+using OpenToolkit.Windowing.GraphicsLibraryFramework;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Xml;
 using Gl = OpenToolkit.Graphics.OpenGL.GL;
 using PixelFormat = OpenToolkit.Graphics.OpenGL.PixelFormat;
 
@@ -24,6 +25,102 @@ namespace Console3D
         public ConsoleRenderProgram(RenderThread renderer) : base(renderer)
         {
             Renderer.AutoEnableCaps = AutoEnableCapabilitiesFlags.Blend;
+
+            Glyphs = new RenderGlyph[ConsoleSize.Width * ConsoleSize.Height];
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                BackColor = Color.Black;
+                ForeColor = Color.DarkGray;
+            }
+        }
+
+        private void TargetWindow_KeyUp(OpenToolkit.Windowing.Common.KeyboardKeyEventArgs obj)
+        {
+            char c = (char)(obj.Key - 19);
+            string cval = ((int)obj.Key).ToString("X2");
+            Log.WriteLine($"0x{cval} {obj.Key} -> {c}");
+
+            if (obj.Key == Key.Enter || obj.Key == Key.KeypadEnter)
+            {
+                WriteLine();
+                return;
+            }
+
+            if (obj.Key == Key.BackSpace)
+            {
+                if (CursorLeft < 1)
+                    return;
+
+                CursorLeft--;
+                SetGlyph(Cursor.X, Cursor.Y, null);
+                return;
+            }
+
+            char? character = KeyConverter.KeyToChar(obj.Key, Renderer.TargetWindow.KeyboardState.IsKeyDown(Key.CapsLock), obj.Shift);
+
+            if (character.HasValue)
+                Write(new string(character.Value, 1));
+        }
+
+        public Color BackColor { get; set; }
+        public Point Cursor { get; set; }
+        public int CursorLeft
+        {
+            get
+            {
+                return Cursor.X;
+            }
+            set
+            {
+                Cursor = new Point(value, Cursor.Y);
+            }
+        }
+
+        public int CursorTop
+        {
+            get
+            {
+                return Cursor.Y;
+            }
+            set
+            {
+                Cursor = new Point(Cursor.X, value);
+            }
+        }
+
+        public Color ForeColor { get; set; }
+        protected RenderGlyph[] Glyphs { get; set; }
+        public void Clear()
+        {
+            for (int i = 0; i < Glyphs.Length; i++)
+                Glyphs[i] = null;
+        }
+
+        public RenderGlyph GetGlyph(int x, int y)
+        {
+            return Glyphs[GetGlyphAddress(x, y)];
+        }
+
+        public void SetGlyph(int x, int y, RenderGlyph glyph)
+        {
+            Glyphs[GetGlyphAddress(x, y)] = glyph;
+        }
+
+        public void SetGlyph(int x, int y, char value)
+        {
+            Glyphs[GetGlyphAddress(x, y)] = new RenderGlyph(value);
+        }
+
+        protected float[] ColorToFloatArray(Color c)
+        {
+            return new float[]
+            {
+                c.R / 255.0f,
+                c.G / 255.0f,
+                c.B / 255.0f,
+                c.A / 255.0f,
+            };
         }
 
         protected void CompileShaders()
@@ -35,6 +132,10 @@ namespace Console3D
             Log.WriteLine("Shader compilation completed.");
         }
 
+        protected int GetGlyphAddress(int x, int y)
+        {
+            return x + (y * ConsoleSize.Width);
+        }
         protected int LoadTexture(Bitmap data, TextureWrapMode mode)
         {
             BitmapData lockedBitmap = data.LockBits(new Rectangle(Point.Empty, data.Size), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
@@ -106,11 +207,11 @@ namespace Console3D
 
             Log.WriteLine("Running on OpenGL: %@", LogLevel.Message, Gl.GetString(StringName.Renderer) + Gl.GetString(StringName.Version));
 
+            Renderer.TargetWindow.KeyUp += TargetWindow_KeyUp;
+
             CompileShaders();
 
             LoadTextures();
-
-            //Gl.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
 
             Gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
         }
@@ -136,8 +237,8 @@ namespace Console3D
             List<float> vertices = new List<float>(4096);
             List<uint> indices = new List<uint>(4096);
 
-            float[] b = new float[] { 0, 0, 0, 0.3f };
-            float[] f = new float[] { 1, 1, 1, 0.7f };
+            float[] db = ColorToFloatArray(BackColor);
+            float[] df = ColorToFloatArray(ForeColor);
 
             int vertexCount = 0;
 
@@ -146,8 +247,13 @@ namespace Console3D
                 float x = xi * cellX;
                 for (int yi = 0; yi < ConsoleSize.Height; yi++)
                 {
+                    RenderGlyph glyphData = GetGlyph(xi, yi);
+
                     float y = yi * cellY;
-                    Rectangle texRec = fontAtlas.GetPointerById(65).Bounds;
+                    Rectangle texRec = fontAtlas.GetPointerById((int)(glyphData?.Glyph ?? ' ')).Bounds;
+
+                    float[] b = glyphData == null || !glyphData.Background.HasValue ? db : ColorToFloatArray(glyphData.Background.Value);
+                    float[] f = glyphData == null || !glyphData.Foreground.HasValue ? df : ColorToFloatArray(glyphData.Foreground.Value);
 
                     int qi = vertexCount;
 
@@ -193,18 +299,18 @@ namespace Console3D
             CheckGlErrors("pre-vab");
 
             float[] fvertices = vertices.ToArray();
-            GCHandle address = GCHandle.Alloc(fvertices, GCHandleType.Pinned);
-            Gl.BufferData(BufferTarget.ArrayBuffer, fvertices.Length * sizeof(float), address.AddrOfPinnedObject(), BufferUsageHint.StaticDraw);
-            address.Free();
+            GCHandle buffAddress = GCHandle.Alloc(fvertices, GCHandleType.Pinned);
+            Gl.BufferData(BufferTarget.ArrayBuffer, fvertices.Length * sizeof(float), buffAddress.AddrOfPinnedObject(), BufferUsageHint.StaticDraw);
+            buffAddress.Free();
 
             CheckGlErrors("pre-eab");
 
             uint[] iindices = indices.ToArray();
-            address = GCHandle.Alloc(iindices, GCHandleType.Pinned);
+            buffAddress = GCHandle.Alloc(iindices, GCHandleType.Pinned);
             int ebo = Gl.GenBuffer();
             Gl.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
-            Gl.BufferData(BufferTarget.ElementArrayBuffer, iindices.Length * sizeof(float), address.AddrOfPinnedObject(), BufferUsageHint.StaticDraw);
-            address.Free();
+            Gl.BufferData(BufferTarget.ElementArrayBuffer, iindices.Length * sizeof(float), buffAddress.AddrOfPinnedObject(), BufferUsageHint.StaticDraw);
+            buffAddress.Free();
 
             CheckGlErrors("pre_va_pointer");
 
@@ -253,7 +359,35 @@ namespace Console3D
         protected override void Renderer_ProcessingRawInput(RenderThread sender, FrameStageControllerEventArgs args)
         {
             if (Renderer.TargetWindow.KeyboardState.IsKeyDown(OpenToolkit.Windowing.Common.Input.Key.Escape))
+            {
                 args.AbortExecution = true;
+                return;
+            }
+        }
+
+        public void WriteLine(string text)
+        {
+            Write(text);
+            WriteLine();
+        }
+
+        public void WriteLine()
+        {
+            Cursor = new Point(0, Cursor.Y + 1);
+        }
+        
+        public void Write(string text)
+        {
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (Cursor.X >= ConsoleSize.Width)
+                    Cursor = new Point(0, Cursor.Y + 1);
+
+                int address = GetGlyphAddress(Cursor.X, Cursor.Y);
+                Glyphs[address] = new RenderGlyph(text[i]);
+
+                Cursor = new Point(Cursor.X + 1, Cursor.Y);
+            }
         }
     }
 }
