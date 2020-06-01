@@ -3,7 +3,6 @@ using Console3D.OpenGL;
 using Console3D.Textures.TextureAtlas;
 using OpenToolkit.Graphics.OpenGL;
 using OpenToolkit.Windowing.Common.Input;
-using OpenToolkit.Windowing.GraphicsLibraryFramework;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -30,50 +29,27 @@ namespace Console3D
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                BackColor = Color.Black;
-                ForeColor = Color.DarkGray;
-            } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                DefaultBackColor = Color.Black;
+                DefaultForeColor = Color.DarkGray;
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                BackColor = Color.White;
-                ForeColor = Color.LightGray;
+                DefaultBackColor = Color.White;
+                DefaultForeColor = Color.LightGray;
             }
             else
             {
-                BackColor = Color.Black;
-                ForeColor = Color.LightGreen;
+                DefaultBackColor = Color.Black;
+                DefaultForeColor = Color.LightGreen;
             }
         }
 
-        private void TargetWindow_KeyUp(OpenToolkit.Windowing.Common.KeyboardKeyEventArgs obj)
-        {
-            char c = (char)(obj.Key - 19);
-            string cval = ((int)obj.Key).ToString("X2");
-            Log.WriteLine($"0x{cval} {obj.Key} -> {c}");
+        public Color DefaultBackColor { get; set; }
 
-            if (obj.Key == Key.Enter || obj.Key == Key.KeypadEnter)
-            {
-                WriteLine();
-                return;
-            }
+        public float BlinkInterval { get; set; } = 500; // Milliseconds
 
-            if (obj.Key == Key.BackSpace)
-            {
-                if (CursorLeft < 1)
-                    return;
-
-                CursorLeft--;
-                SetGlyph(Cursor.X, Cursor.Y, null);
-                return;
-            }
-
-            char? character = KeyConverter.KeyToChar(obj.Key, Renderer.TargetWindow.KeyboardState.IsKeyDown(Key.CapsLock), obj.Shift);
-
-            if (character.HasValue)
-                Write(new string(character.Value, 1));
-        }
-
-        public Color BackColor { get; set; }
         public Point Cursor { get; set; }
+
         public int CursorLeft
         {
             get
@@ -98,9 +74,17 @@ namespace Console3D
             }
         }
 
-        public float BlinkInterval { get; set; } = 500; // In Milliseconds
+        public bool ShowCursor { get; set; } = true;
+
+        
+        public Color DefaultForeColor { get; set; }
+
+        public Color BackColor { get; set; }
         public Color ForeColor { get; set; }
+        public bool InheritDefaultColors { get; set; }
+
         protected RenderGlyph[] Glyphs { get; set; }
+
         public void Clear()
         {
             for (int i = 0; i < Glyphs.Length; i++)
@@ -120,6 +104,42 @@ namespace Console3D
         public void SetGlyph(int x, int y, char value)
         {
             Glyphs[GetGlyphAddress(x, y)] = new RenderGlyph(value);
+        }
+
+        public void Write(string text)
+        {
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (Cursor.X >= ConsoleSize.Width)
+                    Cursor = new Point(0, Cursor.Y + 1);
+
+                RenderGlyph glyph = new RenderGlyph(text[i]);
+
+                if (InheritDefaultColors)
+                {
+                    glyph.Background = BackColor;
+                    glyph.Foreground = ForeColor;
+                }
+
+                int address = GetGlyphAddress(Cursor.X, Cursor.Y);
+                Glyphs[address] = glyph;
+
+                if (Cursor.X + 1 < ConsoleSize.Width)
+                    Cursor = new Point(Cursor.X + 1, Cursor.Y);
+                else
+                    Cursor = new Point(0, Cursor.Y + 1);
+            }
+        }
+
+        public void WriteLine(string text)
+        {
+            Write(text);
+            WriteLine();
+        }
+
+        public void WriteLine()
+        {
+            Cursor = new Point(0, Cursor.Y + 1);
         }
 
         protected float[] ColorToFloatArray(Color c)
@@ -146,6 +166,7 @@ namespace Console3D
         {
             return x + (y * ConsoleSize.Width);
         }
+
         protected int LoadTexture(Bitmap data, TextureWrapMode mode)
         {
             BitmapData lockedBitmap = data.LockBits(new Rectangle(Point.Empty, data.Size), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
@@ -247,8 +268,8 @@ namespace Console3D
             List<float> vertices = new List<float>(4096);
             List<uint> indices = new List<uint>(4096);
 
-            float[] db = ColorToFloatArray(BackColor);
-            float[] df = ColorToFloatArray(ForeColor);
+            float[] db = ColorToFloatArray(DefaultBackColor);
+            float[] df = ColorToFloatArray(DefaultForeColor);
 
             int vertexCount = 0;
 
@@ -259,10 +280,10 @@ namespace Console3D
                 {
                     RenderGlyph glyphData = GetGlyph(xi, yi);
 
-                    if (xi == Cursor.X && yi == Cursor.Y && glyphData == null)
+                    if (ShowCursor && xi == Cursor.X && yi == Cursor.Y && glyphData == null)
                     {
                         int val = (int)((args.CurrentTime.TotalRuntime / 1000.0f) / BlinkInterval);
-                        if (val % 2 == 0)
+                        if (val % 2 == 0 || BlinkInterval == 0)
                             glyphData = new RenderGlyph('_');
                     }
 
@@ -375,39 +396,39 @@ namespace Console3D
 
         protected override void Renderer_ProcessingRawInput(RenderThread sender, FrameStageControllerEventArgs args)
         {
-            if (Renderer.TargetWindow.KeyboardState.IsKeyDown(OpenToolkit.Windowing.Common.Input.Key.Escape))
+            if (Renderer.TargetWindow.KeyboardState.IsKeyDown(Key.Escape))
             {
                 args.AbortExecution = true;
                 return;
             }
         }
 
-        public void WriteLine(string text)
+        private void TargetWindow_KeyUp(OpenToolkit.Windowing.Common.KeyboardKeyEventArgs obj)
         {
-            Write(text);
-            WriteLine();
-        }
+            char c = (char)(obj.Key - 19);
+            string cval = ((int)obj.Key).ToString("X2");
+            Log.WriteLine($"0x{cval} {obj.Key} -> {c}");
 
-        public void WriteLine()
-        {
-            Cursor = new Point(0, Cursor.Y + 1);
-        }
-        
-        public void Write(string text)
-        {
-            for (int i = 0; i < text.Length; i++)
+            if (obj.Key == Key.Enter || obj.Key == Key.KeypadEnter)
             {
-                if (Cursor.X >= ConsoleSize.Width)
-                    Cursor = new Point(0, Cursor.Y + 1);
-
-                int address = GetGlyphAddress(Cursor.X, Cursor.Y);
-                Glyphs[address] = new RenderGlyph(text[i]);
-
-                if (Cursor.X + 1 < ConsoleSize.Width)
-                    Cursor = new Point(Cursor.X + 1, Cursor.Y);
-                else
-                    Cursor = new Point(0, Cursor.Y + 1);
+                WriteLine();
+                return;
             }
+
+            if (obj.Key == Key.BackSpace)
+            {
+                if (CursorLeft < 1)
+                    return;
+
+                CursorLeft--;
+                SetGlyph(Cursor.X, Cursor.Y, null);
+                return;
+            }
+
+            char? character = KeyConverter.KeyToChar(obj.Key, Renderer.TargetWindow.KeyboardState.IsKeyDown(Key.CapsLock), obj.Shift);
+
+            if (character.HasValue)
+                Write(new string(character.Value, 1));
         }
     }
 }
