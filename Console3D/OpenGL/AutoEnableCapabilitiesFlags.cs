@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Console3D.OpenGL
 {
@@ -10,6 +8,7 @@ namespace Console3D.OpenGL
         None = 0,
         Blend = 1,
 
-        All = 1
+
+        All = Blend,
     }
 }

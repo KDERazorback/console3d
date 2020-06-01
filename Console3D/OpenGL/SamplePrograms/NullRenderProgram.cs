@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
+﻿
 namespace Console3D.OpenGL.SamplePrograms
 {
     public class NullRenderProgram : RenderProgram

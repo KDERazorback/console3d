@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Console3D.OpenGL
 {
@@ -24,7 +22,7 @@ namespace Console3D.OpenGL
 
         public override string ToString()
         {
-            return $"{Api} {DriverProfile} {DriverVersion.ToString()} ({DriverVersionString} from {DriverVendor}";
+            return $"{Api} {DriverProfile} {DriverVersion} ({DriverVersionString} from {DriverVendor}";
         }
     }
 }

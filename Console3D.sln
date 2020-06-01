@@ -5,8 +5,6 @@ VisualStudioVersion = 16.0.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Console3D", "Console3D\Console3D.csproj", "{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenGL.Net_netcore2.0", "OpenGL.Net-0.8.4\OpenGL.Net\OpenGL.Net_netcore2.0.csproj", "{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,18 +27,6 @@ Global
 		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Release|x64.Build.0 = Release|Any CPU
 		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Release|x86.ActiveCfg = Release|Any CPU
 		{FEA0DBB6-07D5-4FD4-A298-6896C0F44416}.Release|x86.Build.0 = Release|Any CPU
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Debug|x64.ActiveCfg = Debug|x64
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Debug|x64.Build.0 = Debug|x64
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Debug|x86.ActiveCfg = Debug|x86
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Debug|x86.Build.0 = Debug|x86
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Release|x64.ActiveCfg = Release|Any CPU
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Release|x64.Build.0 = Release|Any CPU
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Release|x86.ActiveCfg = Release|x86
-		{DFF4EEEE-2B12-4686-9DC2-A334BB61B7C2}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

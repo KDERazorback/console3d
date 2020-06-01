@@ -1,35 +1,99 @@
-﻿#if !EMBEDDED_GL
-using com.RazorSoftware.Logging;
+﻿using com.RazorSoftware.Logging;
 using Console3D.OpenGL;
 using Console3D.Textures.TextureAtlas;
+using OpenToolkit.Graphics.OpenGL;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-//#if !EMBEDDED_GL
-#if !EMBEDDED_GL
-using OpenToolkit.Graphics.OpenGL;
 using Gl = OpenToolkit.Graphics.OpenGL.GL;
-#endif
 using PixelFormat = OpenToolkit.Graphics.OpenGL.PixelFormat;
-//#else
-//using PixelFormat = global::Console3D.OpenGL.PixelFormat;
-//#endif
 
 namespace Console3D
 {
     public class ConsoleRenderProgram : RenderProgram
     {
-        protected OpenGL.Shaders.ShaderProgram glyphShader;
         protected Size ConsoleSize = new Size(120, 30);
-        protected Textures.TextureAtlas.Atlas fontAtlas;
+        protected Atlas fontAtlas;
         protected int fontAtlasTexture;
+        protected OpenGL.Shaders.ShaderProgram glyphShader;
         protected Logger KhronosApiLogger;
-
 
         public ConsoleRenderProgram(RenderThread renderer) : base(renderer)
         {
+        }
+
+        protected void CompileShaders()
+        {
+            Log.WriteLine("Compiling shaders...");
+            Log.WriteLine("Compiling 'glyph' program...");
+            glyphShader = OpenGL.Shaders.ShaderProgram.FromFiles("./shaders/glyph.vert", "./shaders/glyph.frag");
+            glyphShader.Compile();
+            Log.WriteLine("Shader compilation completed.");
+        }
+
+        protected int LoadTexture(Bitmap data, TextureWrapMode mode)
+        {
+            BitmapData lockedBitmap = data.LockBits(new Rectangle(Point.Empty, data.Size), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            byte[] buffer = new byte[lockedBitmap.Width * lockedBitmap.Height * 4];
+
+            for (int i = 0; i < buffer.Length; i += 4)
+            {
+                byte r, g, b, a;
+                a = Marshal.ReadByte(lockedBitmap.Scan0 + i);
+                r = Marshal.ReadByte(lockedBitmap.Scan0 + i + 1);
+                g = Marshal.ReadByte(lockedBitmap.Scan0 + i + 2);
+                b = Marshal.ReadByte(lockedBitmap.Scan0 + i + 3);
+
+                buffer[i] = r;
+                buffer[i + 1] = g;
+                buffer[i + 2] = b;
+                buffer[i + 3] = a;
+            }
+
+            data.UnlockBits(lockedBitmap);
+
+            CheckGlErrors("pre-texture-gen");
+            int textureId = Gl.GenTexture();
+            Gl.ActiveTexture(TextureUnit.Texture0);
+            Gl.BindTexture(TextureTarget.Texture2D, textureId);
+            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)mode);
+            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)mode);
+            CheckGlErrors("pre-texture-upload");
+
+            Gl.TexImage2D(TextureTarget.Texture2D,
+                0,
+                PixelInternalFormat.Rgba8,
+                data.Width, data.Height,
+                0,
+                PixelFormat.Rgba,
+                PixelType.UnsignedByte,
+                buffer);
+            CheckGlErrors("post-texture-upload");
+
+            if (mode == TextureWrapMode.ClampToBorder)
+            {
+                float[] borderColor = new float[] { 0xff, 0x14, 0x93 };
+                Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
+            }
+
+            CheckGlErrors("ok-texture-gen");
+
+            return textureId;
+        }
+
+        protected override void LoadTextures()
+        {
+            Log.WriteLine("Loading textures...");
+
+            Log.WriteLine("Loading font atlas 'Code New Roman'...");
+            fontAtlas = Atlas.FromFile(
+                FontAtlas.GetAtlasFileFromName("./cache/fonts", "Code New Roman").FullName,
+                FontAtlas.GetAtlasMetadataFileFromName("./cache/fonts", "Code New Roman").FullName
+            );
+
+            fontAtlasTexture = LoadTexture(fontAtlas.Data, TextureWrapMode.ClampToBorder);
         }
 
         protected override void Renderer_ContextCreated(RenderThread sender, ContextCreationEventArgs args)
@@ -43,17 +107,6 @@ namespace Console3D
             LoadTextures();
 
             Gl.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-        }
-
-        protected override void Renderer_DrawEnd(RenderThread sender, FrameStageEventArgs args)
-        {
-            
-        }
-
-        protected override void Renderer_ProcessingRawInput(RenderThread sender, FrameStageControllerEventArgs args)
-        {
-            //if (Glfw.GetKey(sender.TargetWindow, Keys.Escape) == InputState.Press)
-            //    sender.Stop();
         }
 
         protected override void Renderer_Draw(RenderThread sender, FrameStageEventArgs args)
@@ -109,7 +162,6 @@ namespace Console3D
                         1, 0, 0, 1, // Back
                         1, 1, 1, 1, // Fore
                     });
-
 
                     indices.AddRange(new uint[]
                     {
@@ -169,6 +221,10 @@ namespace Console3D
             CheckGlErrors("unbind");
         }
 
+        protected override void Renderer_DrawEnd(RenderThread sender, FrameStageEventArgs args)
+        {
+        }
+
         protected override void Renderer_DrawPrepare(RenderThread sender, FrameStageControllerEventArgs args)
         {
             CheckGlErrors("pre-program");
@@ -181,77 +237,10 @@ namespace Console3D
             CheckGlErrors("post-uniforms");
         }
 
-        protected override void LoadTextures()
+        protected override void Renderer_ProcessingRawInput(RenderThread sender, FrameStageControllerEventArgs args)
         {
-            Log.WriteLine("Loading textures...");
-
-            Log.WriteLine("Loading font atlas 'Code New Roman'...");
-            fontAtlas = Atlas.FromFile(
-                FontAtlas.GetAtlasFileFromName("./cache/fonts", "Code New Roman").FullName,
-                FontAtlas.GetAtlasMetadataFileFromName("./cache/fonts", "Code New Roman").FullName
-            );
-
-            fontAtlasTexture = LoadTexture(fontAtlas.Data, TextureWrapMode.ClampToBorder);
-        }
-
-        protected int LoadTexture(Bitmap data, TextureWrapMode mode)
-        {
-            BitmapData lockedBitmap = data.LockBits(new Rectangle(Point.Empty, data.Size), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            byte[] buffer = new byte[lockedBitmap.Width * lockedBitmap.Height * 4];
-
-            for (int i = 0; i < buffer.Length; i += 4)
-            {
-                byte r, g, b, a;
-                a = System.Runtime.InteropServices.Marshal.ReadByte(lockedBitmap.Scan0 + i);
-                r = System.Runtime.InteropServices.Marshal.ReadByte(lockedBitmap.Scan0 + i + 1);
-                g = System.Runtime.InteropServices.Marshal.ReadByte(lockedBitmap.Scan0 + i + 2);
-                b = System.Runtime.InteropServices.Marshal.ReadByte(lockedBitmap.Scan0 + i + 3);
-
-                buffer[i] = r;
-                buffer[i + 1] = g;
-                buffer[i + 2] = b;
-                buffer[i + 3] = a;
-            }
-
-            data.UnlockBits(lockedBitmap);
-
-            CheckGlErrors("pre-texture-gen");
-            int textureId = Gl.GenTexture();
-            Gl.ActiveTexture(TextureUnit.Texture0);
-            Gl.BindTexture(TextureTarget.Texture2D, textureId);
-            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)mode);
-            Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)mode);
-            CheckGlErrors("pre-texture-upload");
-
-            Gl.TexImage2D(TextureTarget.Texture2D,
-                0,
-                PixelInternalFormat.Rgba8,
-                data.Width, data.Height,
-                0,
-                PixelFormat.Rgba,
-                PixelType.UnsignedByte,
-                buffer);
-            CheckGlErrors("post-texture-upload");
-
-            if (mode == TextureWrapMode.ClampToBorder)
-            {
-                float[] borderColor = new float[] { 0xff, 0x14, 0x93 };
-                Gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            }
-
-            CheckGlErrors("ok-texture-gen");
-
-            return textureId;
-        }
-
-        protected void CompileShaders()
-        {
-            Log.WriteLine("Compiling shaders...");
-            Log.WriteLine("Compiling 'glyph' program...");
-            glyphShader = OpenGL.Shaders.ShaderProgram.FromFiles("./shaders/glyph.vert", "./shaders/glyph.frag");
-            glyphShader.Compile();
-            Log.WriteLine("Shader compilation completed.");
+            if (Renderer.TargetWindow.KeyboardState.IsKeyDown(OpenToolkit.Windowing.Common.Input.Key.Escape))
+                args.AbortExecution = true;
         }
     }
 }
-#endif

@@ -1,12 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Text;
-#if !EMBEDDED_GL
 using OpenToolkit.Graphics.OpenGL;
 using Gl = OpenToolkit.Graphics.OpenGL.GL;
-#endif
 
 namespace Console3D.OpenGL
 {
@@ -34,15 +28,12 @@ namespace Console3D.OpenGL
 
         protected virtual void Renderer_ContextCreated_Wrap(RenderThread sender)
         {
-#if EMBEDDED_GL
-            if (!OpenGL.Gl.IsApiBound)
-                OpenGL.Gl.BindApi();
-            KhronosVersion ver = Gl.CurrentVersion;
-            ContextCreationEventArgs args = new ContextCreationEventArgs(ver.Api, new Version(ver.Major, ver.Minor, ver.Revision), ver.ToString(), ver.Profile, Gl.CurrentVendor);
-#endif
+            GlVersion ver = GlVersion.Parse(Gl.GetString(StringName.Version));
+            ContextCreationEventArgs args = new ContextCreationEventArgs(ver.Api, ver.Version, ver.ToString(), ver.Profile, Gl.GetString(StringName.Vendor));
 
+            Gl.GetError();
 
-            Renderer_ContextCreated(sender, null);
+            Renderer_ContextCreated(sender, args);
         }
         protected virtual void Renderer_ContextCreated(RenderThread sender, ContextCreationEventArgs args) { }
 
@@ -56,8 +47,11 @@ namespace Console3D.OpenGL
         {
             ErrorCode code = Gl.GetError();
 
-            //if (code != ErrorCode.NoError)
-                //throw new System.Exception(string.Format("OpenGL Draw error on stage {0}: {1}", stage, code.ToString()));
+            //if (code == ErrorCode.NoError)
+            //    throw new Exception("Eureka!");
+
+            if (code != ErrorCode.NoError)
+                throw new Exception(string.Format("OpenGL Draw error on stage {0}: {1}", stage, code.ToString()));
         }
 
         protected virtual void LoadTextures() { }
@@ -67,6 +61,7 @@ namespace Console3D.OpenGL
             Renderer.Start();
 
             LoadTextures();
+
 
             if (!Renderer.Asynchronous)
             {
@@ -80,6 +75,10 @@ namespace Console3D.OpenGL
                         break;
 
                     Renderer.ProcessEvents();
+
+                    if (Renderer.TargetWindow.IsExiting || !Renderer.IsRunning)
+                        break;
+
                     Renderer.AdvanceFrame();
                     OnSyncRenderEnd(args);
 

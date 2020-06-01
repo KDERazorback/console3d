@@ -4,15 +4,15 @@ using OpenToolkit.Graphics.OpenGL;
 using System.IO;
 using Gl = OpenToolkit.Graphics.OpenGL.GL;
 
-namespace Console3D.OpenGL
+namespace Console3D.OpenGL.SamplePrograms
 {
-    public class TriangleShaderRenderProgram : RenderProgram
+    public class IndexedQuadShaderRenderProgram : RenderProgram
     {
+        private uint[] indices;
         private ShaderProgram shader;
-        private int VAO, VBO;
+        private int VAO, VBO, EBO;
         private float[] vertices;
-
-        public TriangleShaderRenderProgram(RenderThread renderer) : base(renderer)
+        public IndexedQuadShaderRenderProgram(RenderThread renderer) : base(renderer)
         {
             Renderer.AutoClearFrames = false;
             Renderer.AutoEnableCaps = AutoEnableCapabilitiesFlags.None;
@@ -39,9 +39,14 @@ namespace Console3D.OpenGL
 
             // Load vertices and indices
             vertices = new float[] {
-                 0.0f,  0.5f, 0.0f,  // top
+                 0.5f,  0.5f, 0.0f,  // top right
                  0.5f, -0.5f, 0.0f,  // bottom right
                 -0.5f, -0.5f, 0.0f,  // bottom left
+                -0.5f,  0.5f, 0.0f   // top left
+            };
+            indices = new uint[] {  // note that we start from 0!
+                0, 1, 3,  // first Triangle
+                1, 2, 3   // second Triangle
             };
 
             // Setup global VAO
@@ -54,7 +59,7 @@ namespace Console3D.OpenGL
             VBO = Gl.GenBuffer();
             Gl.BindBuffer(BufferTarget.ArrayBuffer, VBO);
 
-            int size = (sizeof(float) * vertices.Length); // size must be 36
+            int size = (sizeof(float) * vertices.Length); // size must be 48
             Gl.BufferData(BufferTarget.ArrayBuffer, size, vertices, BufferUsageHint.StaticDraw);
             CheckGlErrors("Renderer_ContextCreated:AfterBufferDataVBO");
 
@@ -64,6 +69,14 @@ namespace Console3D.OpenGL
             Gl.EnableVertexAttribArray(0);
 
             CheckGlErrors("Renderer_ContextCreated:AfterVBO");
+
+            // Setup EBO (indices)
+            EBO = Gl.GenBuffer();
+            Gl.BindBuffer(BufferTarget.ElementArrayBuffer, EBO);
+            size = (sizeof(float) * indices.Length); // Must be 24
+            Gl.BufferData(BufferTarget.ElementArrayBuffer, size, indices, BufferUsageHint.StaticDraw);
+
+            CheckGlErrors("Renderer_ContextCreated:AfterEBO");
 
             // Unbind
             Gl.BindVertexArray(0);
@@ -85,8 +98,8 @@ namespace Console3D.OpenGL
             Gl.UseProgram(shader.ProgramId);
             CheckGlErrors("Renderer_Draw:UseProgram");
 
-            Gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
-            CheckGlErrors("Renderer_Draw:DrawArrays");
+            Gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, 0);
+            CheckGlErrors("Renderer_Draw:DrawElements");
         }
 
         private void TargetWindow_Resize(OpenToolkit.Windowing.Common.ResizeEventArgs obj)

@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using Console3D.OpenGL.Shaders;
 using OpenToolkit.Windowing.Desktop;
-#if !EMBEDDED_GL
 using OpenToolkit.Graphics.OpenGL;
 using Gl = OpenToolkit.Graphics.OpenGL.GL;
-#endif
 
 namespace Console3D.OpenGL
 {
@@ -26,6 +23,7 @@ namespace Console3D.OpenGL
         private bool disposedValue;
         private Size _internalResolution = new Size(800, 600);
         private bool _fullscreen = false;
+        private bool _wireframeMode = false;
 
         public delegate void FrameStageEventDelegate(RenderThread sender, FrameStageEventArgs args);
         public delegate void FrameStageControllerEventDelegate(RenderThread sender, FrameStageControllerEventArgs args);
@@ -45,7 +43,7 @@ namespace Console3D.OpenGL
 
         public Thread Worker { get; private set; }
         private bool AbortFlag = false;
-        public ConsoleNativeWindow TargetWindow { get; private set; }
+        public RenderWindow TargetWindow { get; private set; }
         public Size ViewportSize { get; private set; }
         public Color ClearColor { get; set; } = Color.CornflowerBlue;
         public Size WindowSize { get; private set; }
@@ -117,12 +115,32 @@ namespace Console3D.OpenGL
             set
             {
                 _fullscreen = value;
+                TargetWindow.IsFullscreen = value;
             }
         }
         public bool FrameStarted { get; private set; }
         public ShaderProgram ActiveShaderProgram { get; private set; }
+        public bool WireframeMode
+        {
+            get
+            {
+                return _wireframeMode;
+            }
+            set
+            {
+                if (TargetWindow != null)
+                {
+                    if (value)
+                        Gl.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                    else
+                        Gl.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+                }
 
-        public RenderThread(ConsoleNativeWindow wnd, Size internalRes)
+                _wireframeMode = value;
+            }
+        }
+
+        public RenderThread(RenderWindow wnd, Size internalRes)
         {
             if (wnd == null)
                 throw new ArgumentException("Invalid window specified.");
@@ -182,25 +200,19 @@ namespace Console3D.OpenGL
 
             TargetWindow.MakeCurrent();
 
-
-#if EMBEDDED_GL
-            if (!Gl.IsApiBound)
-                Gl.BindApi();
-#else
-            //Gl.Initialize();
-            //Gl.BindAPI();
-#endif
-
             ViewportSize = new Size(TargetWindow.ClientSize.X, TargetWindow.ClientSize.Y);
+
+            if (WireframeMode)
+                WireframeMode = true; // Recall
 
             if (AutoSetViewport)
                 Gl.Viewport(0, 0, ViewportSize.Width, ViewportSize.Height);
 
 
-            //if (VerticalSync)
-            //    GLFW.Glfw.SwapInterval(1);
-            //else
-            //    GLFW.Glfw.SwapInterval(0);
+            if (VerticalSync)
+                TargetWindow.SwapInterval = 1;
+            else
+                TargetWindow.SwapInterval = 0;
 
             if (AutoEnableCaps.HasFlag(AutoEnableCapabilitiesFlags.Blend))
                 Gl.Enable(EnableCap.Blend);
@@ -315,9 +327,8 @@ namespace Console3D.OpenGL
             if (TargetWindow != null)
                 throw new InvalidOperationException("There is already a window created for the current Render thread.");
 
-            //TargetWindow = new NativeWindow(WindowSize.Width, WindowSize.Height, title, (Fullscreen ? GLFW.Glfw.PrimaryMonitor : GLFW.Monitor.None), Window.None);
-            NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = false, StartVisible = true, StartFocused = true, Title = title, Size = new OpenToolkit.Mathematics.Vector2i(800, 600) };
-            TargetWindow = new ConsoleNativeWindow(settings);
+            NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = Fullscreen, StartVisible = true, StartFocused = true, Title = title, Size = new OpenToolkit.Mathematics.Vector2i(800, 600) };
+            TargetWindow = new RenderWindow(settings);
         }
 
         public void CreateMainWindow()
@@ -337,7 +348,7 @@ namespace Console3D.OpenGL
 
         public void Initialize()
         {
-            SystemTimerResolution = 1000000d / 10000000d;
+            SystemTimerResolution = 1000000d / 10000000d; // TODO: Set here the timer resolution value!
 
             Worker = new Thread(WorkerMain);
             Worker.IsBackground = true;
@@ -346,10 +357,13 @@ namespace Console3D.OpenGL
             Initialized = true;
         }
 
-        public void ProbeWindowSystem()
+        public void ProbeWindowSystem(bool display = false)
         {
-            //NativeWindow wnd = new NativeWindow(400, 300, "GLFW: Probe Window. === Loading... ===");
-            //wnd.Dispose();
+            NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = Fullscreen, Size = new OpenToolkit.Mathematics.Vector2i(800, 600), StartVisible = false, StartFocused = false, Title = "GLFW: Probe Window. === Loading... ===" };
+            NativeWindow wnd = new NativeWindow(settings);
+            if (display)
+                wnd.IsVisible = true;
+            wnd.Dispose();
         }
 
         public bool IsMainThread()

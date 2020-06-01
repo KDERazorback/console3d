@@ -1,84 +1,43 @@
 ﻿using com.RazorSoftware.Logging;
 using Console3D.OpenGL;
-using Console3D.OpenGL.SamplePrograms;
 using Console3D.Textures.Text;
 using Console3D.Textures.TextureAtlas;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Drawing.Text;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
 using System.Threading;
-#if !EMBEDDED_GL
-using OpenToolkit.Graphics.OpenGL;
-using Gl = OpenToolkit.Graphics.OpenGL.GL;
-#endif
 
 namespace Console3D
 {
     public static class Program
     {
-        private static bool ForceLocalLibraries = false;
-
         public static int Main(string[] args)
         {
-            Environment.SetEnvironmentVariable("OPENGL_NET_EGL_STATIC_INIT", "NO");
-
             Log.Initialize(true);
             Log.Console.Enabled = true;
             Log.Console.MinimumLevel = LogLevel.Debug;
 
-            OpenGL.Glfw.LibraryLoadManager.Initialize();
-
             Log.WriteLine("Console3D Test App");
             Log.WriteLine("Running on %@ %@ (%@)",
                 LogLevel.Message,
-                OpenGL.Glfw.LibraryLoadManager.AssemblyLoader.PlatformInfo.DetectedPlatformName,
-                System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture,
-                System.Runtime.InteropServices.RuntimeInformation.OSDescription);
+                GetPlatformName(),
+                RuntimeInformation.ProcessArchitecture,
+                RuntimeInformation.OSDescription);
             Log.WriteLine();
 
             Log.WriteLine("Checking custom fonts...");
             CheckRasterFonts();
 
-            Log.WriteLine("Initializing OpenGL...");
-            if (ForceLocalLibraries)
-            {
-                Log.WriteLine("Forcing usage of local OpenGL libraries installed on the application directory.");
-                OpenGL.Glfw.LibraryLoadManager.AssemblyLoader.LoadNativeGlfw();
-            }
-
-            //Glfw.Init();
-            //Glfw.WindowHint(Hint.ClientApi, ClientApi.OpenGL);
-            //Glfw.WindowHint(Hint.ContextVersionMajor, 3);
-            //Glfw.WindowHint(Hint.ContextVersionMinor, 3);
-            ////Glfw.WindowHint(Hint.OpenglForwardCompatible, true);
-            //Glfw.WindowHint(Hint.OpenglProfile, Profile.Core);
-            //Glfw.WindowHint(Hint.Doublebuffer, true);
-            //Glfw.WindowHint(Hint.Decorated, true);
-
-#if !EMBEDDED_GL
-            //Gl.Initialize();
-#endif
-
             Log.WriteLine("Starting Render Thread...");
 
-            OpenGL.RenderThread renderThread = new OpenGL.RenderThread(new Size(800, 600), new Size(800, 600));
+            OpenGL.RenderThread renderThread = new RenderThread(new Size(800, 600), new Size(800, 600));
             renderThread.Asynchronous = false;
             renderThread.WindowTitle = "Console3D - OpenGL";
             renderThread.Initialize();
-            if (!string.Equals(OpenGL.Glfw.LibraryLoadManager.AssemblyLoader.PlatformInfo.DetectedPlatformName, "windows", StringComparison.OrdinalIgnoreCase))
-            {
-                renderThread.AutoEventPolling = false;
-                renderThread.CreateMainWindow();
-            }
 
             RenderProgram program;
-            //program = new ConsoleRenderProgram(renderThread);
             program = new ConsoleRenderProgram(renderThread);
 
             Log.WriteLine("Starting render thread in %@ mode...",
@@ -110,11 +69,6 @@ namespace Console3D
             Log.WriteLine("Shutting down Render thread...");
             program.Dispose();
 
-            OpenGL.Glfw.LibraryLoadManager.Shutdown();
-#if EMBEDDED_GL
-            OpenGL.Gl.UnbindApi();
-#endif
-
             return 0;
         }
 
@@ -139,7 +93,7 @@ namespace Console3D
                 foreach (FileInfo font in files)
                 {
                     if (string.Equals(font.Extension, ".otf", StringComparison.OrdinalIgnoreCase) || string.Equals(font.Extension, ".ttf", StringComparison.OrdinalIgnoreCase))
-                    { 
+                    {
                         Log.WriteLine("Loading font file %@...", LogLevel.Message, font.Name);
                         FontLoader.LoadFromFile(font.FullName);
                         fontCount++;
@@ -162,7 +116,7 @@ namespace Console3D
                 {
                     // Build font
                     Log.WriteLine("Font '%@' is missing from cache. Rasterizing it...", LogLevel.Message, family.Name);
-                    
+
                     rasterizer.SelectedFont = new Font(family, 18.0f);
                     GlyphCollection rasterizedFont = rasterizer.Raster();
 
@@ -176,6 +130,20 @@ namespace Console3D
                     fontAtlas.ToFile(targetFile.FullName, targetFileMetadata.FullName, ImageFormat.Bmp);
                 }
             }
+        }
+
+        private static string GetPlatformName()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return "windows";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return "linux";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return "macosx";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD))
+                return "freebsd";
+
+            return "unknown";
         }
     }
 }
