@@ -44,7 +44,7 @@ namespace Console3D
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 DefaultBackColor = Color.White;
-                DefaultForeColor = Color.LightGray;
+                DefaultForeColor = Color.DarkSlateGray;
             }
             else
             {

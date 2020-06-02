@@ -238,60 +238,58 @@ namespace Console3D.OpenGL.KeyInput
             bool altgrState = keyboardState.IsKeyDown(Key.RAlt);
             bool commandState = keyboardState.IsKeyDown(Key.Command);
 
-            bool isUpper = capsLockState ^ shiftState;
-
             KeyModifiers modifiers = 0;
             if (shiftState) modifiers |= KeyModifiers.Shift;
             if (controlState) modifiers |= KeyModifiers.Control;
             if (altState) modifiers |= KeyModifiers.Alt;
             if (commandState) modifiers |= KeyModifiers.Command;
 
-            return InternalKeyToString(code, modifiers, altgrState, isUpper);
+            return InternalKeyToString(code, modifiers, altgrState, capsLockState);
         }
 
-        private string InternalKeyToString(int code, KeyModifiers modifiers, bool altgr, bool? isUpper)
+        private string InternalKeyToString(int code, KeyModifiers modifiers, bool altgr, bool capsLock)
         {
             if (IsFailsafe)
-                return InternalKeyToString_Failsafe(code, modifiers, altgr, isUpper);
+                return InternalKeyToString_Failsafe(code, modifiers, altgr, capsLock);
 
-            return InternalKeyToString_Keymap(code, modifiers, altgr, isUpper);
+            return InternalKeyToString_Keymap(code, modifiers, altgr, capsLock);
         }
 
-        private long GetInternalKeyId(int code, KeyModifiers modifiers, bool altgr, bool? upper)
+        private long GetInternalKeyId(int code, KeyModifiers modifiers, bool altgr, bool? isUpper)
         {
             int customFlags = 0;
             if (altgr) customFlags += 1; // AltGr
-            if (upper.HasValue)
+            if (isUpper.HasValue)
             {
-                if (upper.Value)
+                if (isUpper.Value)
                     customFlags += 2; // IsUpper
                 else
                     customFlags += 4; // IsLower
             }
 
-
             return code + ((int)modifiers << 16) + (customFlags << 24);
         }
 
-        private string InternalKeyToString_Keymap(int code, KeyModifiers modifiers, bool altgr, bool? isUpper)
+        private string InternalKeyToString_Keymap(int code, KeyModifiers modifiers, bool altgr, bool capsLock)
         {
-            long id = GetInternalKeyId(code, modifiers, altgr, isUpper);
+            bool isUpper = capsLock ^ modifiers.HasFlag(KeyModifiers.Shift);
+            long id = GetInternalKeyId(code, modifiers, altgr, null); // Try to get case-invariant version
 
             if (InternalMappings.TryGetValue(id, out InternalKeyMappingEntry entry))
                 return entry.Value;
 
-            if (isUpper.HasValue && !isUpper.Value)
-            {
-                id = GetInternalKeyId(code, modifiers, altgr, null); // Try to get case-invariant version
+            KeyModifiers unshifted_modifiers = modifiers;
+            if (unshifted_modifiers.HasFlag(KeyModifiers.Shift))
+                unshifted_modifiers ^= KeyModifiers.Shift;
+            id = GetInternalKeyId(code, unshifted_modifiers, altgr, isUpper); // Try to get case-variant version
 
-                if (InternalMappings.TryGetValue(id, out InternalKeyMappingEntry lcentry))
-                    return lcentry.Value;
-            }
+            if (InternalMappings.TryGetValue(id, out InternalKeyMappingEntry centry))
+                return centry.Value;
 
             return null;
         }
 
-        private string InternalKeyToString_Failsafe(int code, KeyModifiers modifiers, bool altgr, bool? isUpper)
+        private string InternalKeyToString_Failsafe(int code, KeyModifiers modifiers, bool altgr, bool capsLock)
         {
             if (!IsLoaded)
                 throw new InvalidOperationException("A keyboard layout must be loaded before calling any of the KeyConverter methods.");
@@ -299,7 +297,8 @@ namespace Console3D.OpenGL.KeyInput
             // Standard Alphabet
             if (code >= 0x54 && code <= 0x6D)
             {
-                if (isUpper.HasValue && isUpper.Value)
+                bool isUpper = modifiers.HasFlag(KeyModifiers.Shift) ^ capsLock;
+                if (isUpper)
                     return new string((char)(code - 0x13), 1);
 
                 return new string((char)(code + 0x0D), 1);

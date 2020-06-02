@@ -15,6 +15,7 @@ namespace Console3D
     public static class Program
     {
         private static bool restartGraphicsProgram = false;
+        private static bool CapsLockState = false;
 
         public static int Main(string[] args)
         {
@@ -95,7 +96,7 @@ namespace Console3D
         private static void Program_KeyDown(ConsoleRenderProgram sender, ConsoleRenderProgramKeyEventArgs e)
         {
             // DEBUG: Print key to the general log
-            string value = e.GetAssociatedString(false);
+            string value = e.GetAssociatedString(CapsLockState);
             string cval = ((int)e.Key).ToString("X2");
             Log.WriteLine($"0x{cval} {e.Key} -> {value}");
             // End of Debug print
@@ -128,6 +129,11 @@ namespace Console3D
                 sender.ForeColor = Color.Cyan;
                 Log.WriteLine("Colored line sample here");
                 sender.ForeColor = sender.DefaultForeColor;
+            }
+
+            if (e.Key == OpenToolkit.Windowing.Common.Input.Key.CapsLock)
+            {
+                CapsLockState = !CapsLockState;
             }
         }
 
