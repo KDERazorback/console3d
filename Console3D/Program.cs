@@ -1,5 +1,6 @@
 ﻿using com.RazorSoftware.Logging;
 using Console3D.OpenGL;
+using Console3D.OpenGL.KeyInput;
 using Console3D.Textures.Text;
 using Console3D.Textures.TextureAtlas;
 using System;
@@ -39,10 +40,15 @@ namespace Console3D
             renderThread.WindowTitle = "Console3D - OpenGL";
             renderThread.Initialize();
 
+            KeyConverter.Default = new KeyConverter("en-US");
+            KeyConverter.Default.IgnoreLoadErrors = false;
+            using (FileStream fs = new FileStream("./res/layout_en-US.txt", FileMode.Open, FileAccess.Read, FileShare.Read))
+                KeyConverter.Default.LoadLayout(fs);
+
             ConsoleRenderProgram program;
             program = new ConsoleRenderProgram(renderThread);
             program.FontName = "Unifont";
-            program.KeyUp += Program_KeyUp;
+            program.KeyDown += Program_KeyDown;
 
             Log.WriteLine("Starting render thread in %@ mode...",
                 LogLevel.Message,
@@ -86,12 +92,13 @@ namespace Console3D
             return 0;
         }
 
-        private static void Program_KeyUp(ConsoleRenderProgram sender, ConsoleRenderProgramKeyEventArgs e)
+        private static void Program_KeyDown(ConsoleRenderProgram sender, ConsoleRenderProgramKeyEventArgs e)
         {
             // DEBUG: Print key to the general log
-            char c = (char)(e.Key - 19);
+            string value = e.GetAssociatedString(false);
             string cval = ((int)e.Key).ToString("X2");
-            Log.WriteLine($"0x{cval} {e.Key} -> {c}");
+            Log.WriteLine($"0x{cval} {e.Key} -> {value}");
+            // End of Debug print
 
             e.Intercept = true;
 

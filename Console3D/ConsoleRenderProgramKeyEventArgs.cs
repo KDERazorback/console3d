@@ -1,8 +1,6 @@
-﻿using OpenToolkit.Windowing.Common;
+﻿using Console3D.OpenGL.KeyInput;
+using OpenToolkit.Windowing.Common;
 using OpenToolkit.Windowing.Common.Input;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Console3D
 {
@@ -11,24 +9,45 @@ namespace Console3D
     {
         internal ConsoleRenderProgramKeyEventArgs(KeyboardKeyEventArgs obj)
         {
-            Shift = obj.Shift;
-            Control = obj.Control;
-            Alt = obj.Alt;
-            Command = obj.Command;
-            IsRepeat = obj.IsRepeat;
             Key = obj.Key;
+
+            IsShift = obj.Shift;
+            IsControl = obj.Control;
+            IsAlt = obj.Alt;
+            IsCommand = obj.Command;
+
             KeyModifiers = obj.Modifiers;
+
+            IsRepeat = obj.IsRepeat;
+            
             ScanCode = obj.ScanCode;
         }
-        public bool Shift { get; set; }
-        public KeyModifiers KeyModifiers { get; set; }
+        public bool IsShift { get; }
+        public KeyModifiers KeyModifiers { get; }
 
         public bool Intercept { get; set; } = false;
-        public Key Key { get; set; }
-        public bool IsRepeat { get; set; }
-        public bool Alt { get; set; }
-        public bool Command { get; set; }
-        public bool Control { get; set; }
-        public int ScanCode { get; set; }
+        public Key Key { get; }
+        public bool IsRepeat { get; }
+        public bool IsAlt { get; }
+        public bool IsCommand { get; }
+        public bool IsControl { get; }
+        public int ScanCode { get; }
+
+        public string GetAssociatedString(bool capsLockState, KeyConverter converter)
+        {
+            KeyboardState state = new KeyboardState();
+            state.SetKeyState(Key, true);
+            state.SetKeyState(Key.LControl, IsControl);
+            state.SetKeyState(Key.LAlt, IsAlt);
+            state.SetKeyState(Key.LShift, IsShift);
+            state.SetKeyState(Key.Command, IsCommand);
+
+            return converter.KeyToString((int)Key, state, capsLockState);
+        }
+
+        public string GetAssociatedString(bool capsLockState)
+        {
+            return GetAssociatedString(capsLockState, KeyConverter.Default);
+        }
     }
 }

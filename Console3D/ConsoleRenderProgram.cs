@@ -21,10 +21,14 @@ namespace Console3D
         protected int fontAtlasTexture;
         protected OpenGL.Shaders.ShaderProgram glyphShader;
         protected Logger KhronosApiLogger;
+        protected int VAO;
+        protected int VBO;
+        protected int EBO;
 
         public delegate void ConsoleRenderProgramKeyEventHandler(ConsoleRenderProgram sender, ConsoleRenderProgramKeyEventArgs e);
 
         public event ConsoleRenderProgramKeyEventHandler KeyUp;
+        public event ConsoleRenderProgramKeyEventHandler KeyDown;
 
         public ConsoleRenderProgram(RenderThread renderer) : base(renderer)
         {
@@ -278,6 +282,7 @@ namespace Console3D
 
             Log.WriteLine("Running on OpenGL: %@", LogLevel.Message, Gl.GetString(StringName.Renderer) + Gl.GetString(StringName.Version));
 
+            Renderer.TargetWindow.KeyDown += TargetWindow_KeyDown;
             Renderer.TargetWindow.KeyUp += TargetWindow_KeyUp;
 
             CompileShaders();
@@ -285,6 +290,47 @@ namespace Console3D
             LoadTextures();
 
             Gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+            VAO = Gl.GenVertexArray();
+            Gl.BindVertexArray(VAO);
+
+            CheckGlErrors("pre-texture");
+
+            Gl.ActiveTexture(TextureUnit.Texture0);
+            Gl.BindTexture(TextureTarget.Texture2D, fontAtlasTexture);
+
+            CheckGlErrors("post-texture");
+
+            VBO = Gl.GenBuffer();
+            Gl.BindBuffer(BufferTarget.ArrayBuffer, VBO);
+
+            EBO = Gl.GenBuffer();
+            Gl.BindBuffer(BufferTarget.ElementArrayBuffer, EBO);
+
+            CheckGlErrors("pre_va_pointer");
+
+            Gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 12 * sizeof(float), 0 * sizeof(float));
+            CheckGlErrors("post-va-pointer-0-set");
+            Gl.EnableVertexAttribArray(0);
+            CheckGlErrors("post-va-pointer-0-enable");
+
+            Gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 12 * sizeof(float), 2 * sizeof(float));
+            Gl.EnableVertexAttribArray(1);
+            CheckGlErrors("post-va-pointer-1");
+
+            Gl.VertexAttribPointer(2, 4, VertexAttribPointerType.Float, false, 12 * sizeof(float), 4 * sizeof(float));
+            Gl.EnableVertexAttribArray(2);
+            CheckGlErrors("post-va-pointer-2");
+
+            Gl.VertexAttribPointer(3, 4, VertexAttribPointerType.Float, false, 12 * sizeof(float), 8 * sizeof(float));
+            Gl.EnableVertexAttribArray(3);
+        }
+
+        private void TargetWindow_KeyUp(OpenToolkit.Windowing.Common.KeyboardKeyEventArgs obj)
+        {
+            ConsoleRenderProgramKeyEventArgs args = new ConsoleRenderProgramKeyEventArgs(obj);
+
+            OnKeyUp(args);
         }
 
         protected override void Renderer_Draw(RenderThread sender, FrameStageEventArgs args)
@@ -294,17 +340,7 @@ namespace Console3D
 
             float cellX = sender.InternalResolution.Width / (float)ConsoleSize.Width;
             float cellY = sender.InternalResolution.Height / (float)ConsoleSize.Height;
-
-            int vao = Gl.GenVertexArray();
-            Gl.BindVertexArray(vao);
-
-            CheckGlErrors("pre-texture");
-
-            Gl.ActiveTexture(TextureUnit.Texture0);
-            Gl.BindTexture(TextureTarget.Texture2D, fontAtlasTexture);
-
-            CheckGlErrors("post-texture");
-
+            
             List<float> vertices = new List<float>(4096);
             List<uint> indices = new List<uint>(4096);
 
@@ -378,46 +414,27 @@ namespace Console3D
                 }
             }
 
-            int vbo = Gl.GenBuffer();
-            Gl.BindBuffer(BufferTarget.ArrayBuffer, vbo);
-
-            CheckGlErrors("pre-vab");
+            Gl.BindVertexArray(VAO);
+            Gl.BindBuffer(BufferTarget.ArrayBuffer, VBO);
 
             float[] fvertices = vertices.ToArray();
+            vertices.Clear();
+
+            uint[] iindices = indices.ToArray();
+            indices.Clear();
+
+            CheckGlErrors("pre-vab");
             GCHandle buffAddress = GCHandle.Alloc(fvertices, GCHandleType.Pinned);
-            Gl.BufferData(BufferTarget.ArrayBuffer, fvertices.Length * sizeof(float), buffAddress.AddrOfPinnedObject(), BufferUsageHint.StaticDraw);
+            Gl.BufferData(BufferTarget.ArrayBuffer, fvertices.Length * sizeof(float), buffAddress.AddrOfPinnedObject(), BufferUsageHint.StreamDraw);
             buffAddress.Free();
 
             CheckGlErrors("pre-eab");
-
-            uint[] iindices = indices.ToArray();
             buffAddress = GCHandle.Alloc(iindices, GCHandleType.Pinned);
-            int ebo = Gl.GenBuffer();
-            Gl.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
-            Gl.BufferData(BufferTarget.ElementArrayBuffer, iindices.Length * sizeof(float), buffAddress.AddrOfPinnedObject(), BufferUsageHint.StaticDraw);
+            Gl.BufferData(BufferTarget.ElementArrayBuffer, iindices.Length * sizeof(float), buffAddress.AddrOfPinnedObject(), BufferUsageHint.StreamDraw);
             buffAddress.Free();
 
-            CheckGlErrors("pre_va_pointer");
-
-            Gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 12 * sizeof(float), 0 * sizeof(float));
-            CheckGlErrors("post-va-pointer-0-set");
-            Gl.EnableVertexAttribArray(0);
-            CheckGlErrors("post-va-pointer-0-enable");
-
-            Gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 12 * sizeof(float), 2 * sizeof(float));
-            Gl.EnableVertexAttribArray(1);
-            CheckGlErrors("post-va-pointer-1");
-
-            Gl.VertexAttribPointer(2, 4, VertexAttribPointerType.Float, false, 12 * sizeof(float), 4 * sizeof(float));
-            Gl.EnableVertexAttribArray(2);
-            CheckGlErrors("post-va-pointer-2");
-
-            Gl.VertexAttribPointer(3, 4, VertexAttribPointerType.Float, false, 12 * sizeof(float), 8 * sizeof(float));
-            Gl.EnableVertexAttribArray(3);
-
             CheckGlErrors("predraw");
-
-            Gl.DrawElements(PrimitiveType.Triangles, iindices.Length, DrawElementsType.UnsignedInt, 0);
+            Gl.DrawElements(BeginMode.Triangles, iindices.Length, DrawElementsType.UnsignedInt, 0);
 
             CheckGlErrors("final");
             Gl.BindVertexArray(0);
@@ -450,11 +467,11 @@ namespace Console3D
             }
         }
 
-        private void TargetWindow_KeyUp(OpenToolkit.Windowing.Common.KeyboardKeyEventArgs obj)
+        private void TargetWindow_KeyDown(OpenToolkit.Windowing.Common.KeyboardKeyEventArgs obj)
         {
             ConsoleRenderProgramKeyEventArgs args = new ConsoleRenderProgramKeyEventArgs(obj);
 
-            OnKeyUp(args);
+            OnKeyDown(args);
 
             if (args.Intercept)
                 return;
@@ -475,15 +492,20 @@ namespace Console3D
                 return;
             }
 
-            char? character = KeyConverter.KeyToChar(obj.Key, Renderer.TargetWindow.KeyboardState.IsKeyDown(Key.CapsLock), obj.Shift);
+            string value = OpenGL.KeyInput.KeyConverter.Default.KeyToString((int)obj.Key, Renderer.TargetWindow.KeyboardState, Renderer.TargetWindow.KeyboardState.IsKeyDown(Key.CapsLock));
 
-            if (character.HasValue)
-                Write(new string(character.Value, 1));
+            if (!string.IsNullOrEmpty(value))
+                Write(value);
         }
 
         protected virtual void OnKeyUp(ConsoleRenderProgramKeyEventArgs e)
         {
             KeyUp?.Invoke(this, e);
+        }
+
+        protected virtual void OnKeyDown(ConsoleRenderProgramKeyEventArgs e)
+        {
+            KeyDown?.Invoke(this, e);
         }
     }
 }

@@ -42,6 +42,7 @@ namespace Console3D.OpenGL
         public event FrameStageControllerEventDelegate DrawPrepare;
         public event FrameStageEventDelegate Sleeping;
         public event ContextEventDelegate ContextCreated;
+        public event ContextEventDelegate ContextDestroyed;
 
 
         public Thread Worker { get; private set; }
@@ -194,6 +195,7 @@ namespace Console3D.OpenGL
             if (OwnsWindow)
             {
                 TargetWindow?.Dispose();
+                OnContextDestroyed();
                 TargetWindow = null;
             }
         }
@@ -256,7 +258,7 @@ namespace Console3D.OpenGL
         {
             if (_frameIndex > 0)
             {
-                _currFrameTimerValue = (ulong)_systemTimer.ElapsedTicks; // TODO: Set here a timer value!
+                _currFrameTimerValue = (ulong)_systemTimer.ElapsedTicks;
                 _timeSinceLastFrame = (ulong)((_currFrameTimerValue - _lastFrameTimeValue) * SystemTimerResolution);
                 _totalFrameTime += _timeSinceLastFrame;
             }
@@ -284,7 +286,6 @@ namespace Console3D.OpenGL
             if (AutoEventPolling)
                 ProcessEvents();
 
-            args = new FrameStageControllerEventArgs(CurrentTime);
             OnDrawPrepare(args);
 
             if (args.AbortExecution)
@@ -537,6 +538,11 @@ namespace Console3D.OpenGL
         protected virtual void OnContextCreated()
         {
             ContextCreated?.Invoke(this);
+        }
+
+        protected virtual void OnContextDestroyed()
+        {
+            ContextDestroyed?.Invoke(this);
         }
     }
 }

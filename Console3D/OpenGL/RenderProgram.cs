@@ -21,7 +21,13 @@ namespace Console3D.OpenGL
             renderer.Draw += Renderer_Draw;
             renderer.DrawEnd += Renderer_DrawEnd;
             renderer.ContextCreated += Renderer_ContextCreated_Wrap;
+            renderer.ContextDestroyed += Renderer_ContextDestroyed;
             renderer.ProcessingRawInput += Renderer_ProcessingRawInput;
+        }
+
+        protected virtual void Renderer_ContextDestroyed(RenderThread sender)
+        {
+            
         }
 
         protected virtual void Renderer_ProcessingRawInput(RenderThread sender, FrameStageControllerEventArgs args) { }
