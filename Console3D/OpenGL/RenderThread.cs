@@ -363,7 +363,7 @@ namespace Console3D.OpenGL
             {
                 settings.API = OpenToolkit.Windowing.Common.ContextAPI.OpenGL;
                 settings.APIVersion = new Version(3, 3, 0, 0);
-                settings.Profile = OpenToolkit.Windowing.Common.ContextProfile.Compatability;
+                settings.Profile = OpenToolkit.Windowing.Common.ContextProfile.Core;
             }
 
             TargetWindow = new RenderWindow(settings);
