@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Console3D
 {
-    internal static class FontAtlas
+    public static class FontAtlas
     {
         public static FileInfo GetAtlasFileFromName(string cacheDir, string familyName)
         {

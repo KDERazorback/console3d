@@ -1,4 +1,6 @@
 ﻿using com.RazorSoftware.Logging;
+using Console3D;
+using Console3D.Adapters;
 using Console3D.OpenGL;
 using Console3D.OpenGL.KeyInput;
 using Console3D.Textures.Text;
@@ -10,7 +12,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace Console3D
+namespace TestApp
 {
     public static class Program
     {
@@ -36,7 +38,7 @@ namespace Console3D
 
             Log.WriteLine("Starting Render Thread...");
 
-            OpenGL.RenderThread renderThread = new RenderThread(new Size(960, 480), new Size(960, 480));
+            RenderThread renderThread = new RenderThread(new Size(960, 480), new Size(960, 480));
             renderThread.Asynchronous = false;
             renderThread.WindowTitle = "Console3D - OpenGL";
             renderThread.Initialize();
@@ -55,7 +57,7 @@ namespace Console3D
                 LogLevel.Message,
                 renderThread.Asynchronous ? "Asynchronous" : "Synchronous");
 
-            RzLogAdapter adapter = new RzLogAdapter(program);
+            RzSwLogAdapter adapter = new RzSwLogAdapter(program);
             Log.AttachOutput(adapter);
 
             program.Run();

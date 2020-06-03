@@ -1,14 +1,12 @@
 ﻿using com.RazorSoftware.Logging;
 using com.RazorSoftware.Logging.Outputs;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Console3D
+namespace Console3D.Adapters
 {
-    public class RzLogAdapter : IOutput
+    public class RzSwLogAdapter : IOutput
     {
-        public RzLogAdapter(ConsoleRenderProgram renderProgram)
+        public RzSwLogAdapter(ConsoleRenderProgram renderProgram)
         {
             RenderProgram = renderProgram ?? throw new ArgumentNullException(nameof(renderProgram));
         }

@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <OutputType>Exe</OutputType>
-    <StartupObject>Console3D.Program</StartupObject>
+    <OutputType>Library</OutputType>
+    <StartupObject></StartupObject>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
@@ -30,8 +30,8 @@
 
   <ItemGroup>
     <PackageReference Include="OpenTK" Version="4.0.0-pre9.1" />
+    <PackageReference Include="RazorSoftware.Logging" Version="1.0.5.2-beta" />
     <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
-    <PackageReference Include="com.razorsoftware.logging.core" Version="1.0.4.6-beta" />
   </ItemGroup>
 
   <ItemGroup>

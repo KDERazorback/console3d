@@ -38,7 +38,12 @@ namespace Console3D.Textures.Text
             RasterBasicUtf8 = basicUtf8;
             RasterGreekBasedUtf8 = greekUtf8;
 
-            Logger = new SlimLogger(logFilename.Replace('/', Path.DirectorySeparatorChar), "FONTRASTER");
+            FileInfo fi = new FileInfo(logFilename.Replace('/', Path.DirectorySeparatorChar));
+
+            if (!fi.Directory.Exists)
+                fi.Directory.Create();
+
+            Logger = new SlimLogger(fi.FullName, "FONTRASTER");
         }
         public GdiFontRasterizer(GlyphInfo[] unicodeTable, string logFilename = "./logs/font_rasterizer.log") : this(false, false, false, logFilename)
         {
