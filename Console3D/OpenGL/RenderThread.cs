@@ -214,7 +214,6 @@ namespace Console3D.OpenGL
                 CreateMainWindow(WindowTitle);
 
             _systemTimer.Start();
-            SystemTimerResolution = 1000000d / Stopwatch.Frequency;
 
             TargetWindow.MakeCurrent();
 
@@ -237,7 +236,7 @@ namespace Console3D.OpenGL
 
             OnContextCreated();
 
-            _lastFrameTimeValue = 0; // TODO: Set here a timer value!
+            _lastFrameTimeValue = 0;
             _timeSinceLastFrame = 0;
             _frameIndex = 0;
 
@@ -339,12 +338,12 @@ namespace Console3D.OpenGL
             OnSleeping(CurrentTime);
         }
 
-        public void CreateMainWindow(string title)
+        public void CreateMainWindow(string title, bool display = true)
         {
             if (TargetWindow != null)
                 throw new InvalidOperationException("There is already a window created for the current Render thread.");
 
-            NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = Fullscreen, StartVisible = true, StartFocused = true, Title = title, Size = new OpenToolkit.Mathematics.Vector2i(WindowSize.Width, WindowSize.Height) };
+            NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = Fullscreen, StartVisible = display, StartFocused = display, Title = title, Size = new OpenToolkit.Mathematics.Vector2i(WindowSize.Width, WindowSize.Height) };
 
             if (Fullscreen)
             {
@@ -359,6 +358,14 @@ namespace Console3D.OpenGL
                 settings.Flags |= OpenToolkit.Windowing.Common.ContextFlags.ForwardCompatible;
                 settings.Profile = OpenToolkit.Windowing.Common.ContextProfile.Core;
             }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                settings.API = OpenToolkit.Windowing.Common.ContextAPI.OpenGL;
+                settings.APIVersion = new Version(3, 3, 0, 0);
+                settings.Profile = OpenToolkit.Windowing.Common.ContextProfile.Compatability;
+            }
+
             TargetWindow = new RenderWindow(settings);
         }
 
@@ -379,7 +386,7 @@ namespace Console3D.OpenGL
 
         public void Initialize()
         {
-            SystemTimerResolution = 1000000d / 10000000d; // TODO: Set here the timer resolution value!
+            SystemTimerResolution = 1000000d / Stopwatch.Frequency;
 
             Worker = new Thread(WorkerMain);
             Worker.IsBackground = true;
@@ -390,11 +397,9 @@ namespace Console3D.OpenGL
 
         public void ProbeWindowSystem(bool display = false)
         {
-            NativeWindowSettings settings = new NativeWindowSettings() { IsFullscreen = Fullscreen, Size = new OpenToolkit.Mathematics.Vector2i(800, 600), StartVisible = false, StartFocused = false, Title = "GLFW: Probe Window. === Loading... ===" };
-            NativeWindow wnd = new NativeWindow(settings);
-            if (display)
-                wnd.IsVisible = true;
-            wnd.Dispose();
+            CreateMainWindow("OpenGL Probing -== Loading ==-", display);
+            TargetWindow.Dispose();
+            TargetWindow = null;
         }
 
         public bool IsMainThread()

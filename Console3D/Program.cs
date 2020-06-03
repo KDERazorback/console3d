@@ -19,7 +19,7 @@ namespace Console3D
 
         public static int Main(string[] args)
         {
-            Log.Initialize(true);
+            Log.Initialize(false);
             Log.Console.Enabled = true;
             Log.Console.MinimumLevel = LogLevel.Debug;
 
